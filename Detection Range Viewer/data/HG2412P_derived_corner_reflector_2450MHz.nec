@@ -1,0 +1,94 @@
+CM SYNTHESIZED analog of L-com/HyperLink HG2412P "Mini Panel Antenna"
+CM (2.4 GHz, 11 dBi, N-Female, https://www.l-com.com - datasheet ds_HG2412P.pdf)
+CM
+CM Extracted target specs from datasheet:
+CM   Frequency       2400-2500 MHz (2450 MHz used here, matches datasheet's
+CM                   own test/pattern frequency)
+CM   Gain            11.14 dBi
+CM   Polarization    Vertical or Horizontal (mechanically adjustable)
+CM   Beamwidth       54 deg (H-plane) / 53 deg (V-plane)
+CM   F/B ratio       ~17.7-18.7 dB
+CM   VSWR            <= 1.5:1, 50 ohm, N-Female, 200 W max
+CM   Radome size     4.0 x 4.0 x 4.0 in (102 x 102 x 102 mm)
+CM
+CM THIS IS NOT A REVERSE-ENGINEERED COPY. The real HG2412P is almost
+CM certainly an internal microstrip PATCH ARRAY with a printed feed
+CM network - NEC2 is a free-space wire method-of-moments engine with no
+CM dielectric/substrate support, so a patch array's real internal geometry
+CM cannot be built in NEC2 at all, and no per-element dimensions are
+CM published anyway (only the aggregate specs above).
+CM
+CM Instead this file is a classic 90-degree CORNER REFLECTOR DIPOLE - a
+CM well-documented, pure-wire antenna archetype that is natively NEC2-
+CM buildable and lands in the same gain/beamwidth neighborhood as this
+CM product (~11 dBi, ~50-55 deg beamwidths). Parameters from standard
+CM corner-reflector design practice (Kraus):
+CM   Dipole-to-apex spacing   S  = 0.5 wavelength
+CM   Reflector wing length    L  = 1.0 wavelength (each of the 2 wings,
+CM                                 measured from the apex)
+CM   Reflector wing height    H  = 1.1 wavelength
+CM S=0.5 lambda is a standard "sweet spot" choice: good gain without
+CM excessive pattern ripple, AND it happens to pull dipole feed impedance
+CM down close to 50 ohm (vs. ~73 ohm for an isolated dipole), which is a
+CM nice practical match to this antenna's 50 ohm N-female feed - not a
+CM coincidence, a known corner-reflector design property.
+CM
+CM Each flat reflector wing is approximated the standard NEC way: a grid
+CM of parallel wires running parallel to the dipole (both vertical here),
+CM spaced ~0.083 lambda apart (12 wires per wing, comfortably under the
+CM ~0.1 lambda spacing needed for a wire grid to behave like a solid
+CM reflecting sheet at this frequency).
+CM
+CM CAVEAT: gain/beamwidth/F-B/impedance against the datasheet targets
+CM above were NOT verified by re-running NEC here. Corner reflectors are
+CM fairly forgiving but expect S and/or dipole length to need a few
+CM percent of retuning in NEC2/4nec2/xnec2c for a clean 50 ohm match and
+CM to dial in the exact 11 dBi / beamwidth targets.
+CM
+CM Real product is a compact 4"x4"x4" box; this wire analog's reflector
+CM footprint (~1 wavelength = 4.8" per wing) is physically larger than
+CM that box - expected, since a real patch array achieves the same gain
+CM in a smaller volume than a wire corner reflector can.
+CM
+CM Axes: boresight = -X (same convention as the other files in this set).
+CM Dipole and reflector apex both centered on Y=0. VERTICAL polarization
+CM (dipole along Z) at height Z = 6.0 m (change to match your mount). To
+CM get HORIZONTAL polarization (this product supports both, like the
+CM ZDADJ433-12YG files elsewhere in this set), rotate the whole structure
+CM 90 deg about the boresight (X) axis - ask if you want that variant
+CM built out as a companion file.
+CM Feed = dipole (tag 1), center segment. Ground = average (er=13,
+CM sigma=0.005 S/m) - swap GN line for another terrain as in the other
+CM files in this set.
+CE
+GW 1  11  0.000000  0.000000  5.970633   0.000000  0.000000  6.029367  0.0015
+GW 2  11  0.068394  0.007212  5.932700   0.068394  0.007212  6.067300  0.0010
+GW 3  11  0.075607  0.014425  5.932700   0.075607  0.014425  6.067300  0.0010
+GW 4  11  0.082819  0.021637  5.932700   0.082819  0.021637  6.067300  0.0010
+GW 5  11  0.090032  0.028850  5.932700   0.090032  0.028850  6.067300  0.0010
+GW 6  11  0.097244  0.036062  5.932700   0.097244  0.036062  6.067300  0.0010
+GW 7  11  0.104457  0.043275  5.932700   0.104457  0.043275  6.067300  0.0010
+GW 8  11  0.111669  0.050487  5.932700   0.111669  0.050487  6.067300  0.0010
+GW 9  11  0.118882  0.057700  5.932700   0.118882  0.057700  6.067300  0.0010
+GW 10 11  0.126094  0.064912  5.932700   0.126094  0.064912  6.067300  0.0010
+GW 11 11  0.133306  0.072124  5.932700   0.133306  0.072124  6.067300  0.0010
+GW 12 11  0.140519  0.079337  5.932700   0.140519  0.079337  6.067300  0.0010
+GW 13 11  0.147731  0.086549  5.932700   0.147731  0.086549  6.067300  0.0010
+GW 14 11  0.068394 -0.007212  5.932700   0.068394 -0.007212  6.067300  0.0010
+GW 15 11  0.075607 -0.014425  5.932700   0.075607 -0.014425  6.067300  0.0010
+GW 16 11  0.082819 -0.021637  5.932700   0.082819 -0.021637  6.067300  0.0010
+GW 17 11  0.090032 -0.028850  5.932700   0.090032 -0.028850  6.067300  0.0010
+GW 18 11  0.097244 -0.036062  5.932700   0.097244 -0.036062  6.067300  0.0010
+GW 19 11  0.104457 -0.043275  5.932700   0.104457 -0.043275  6.067300  0.0010
+GW 20 11  0.111669 -0.050487  5.932700   0.111669 -0.050487  6.067300  0.0010
+GW 21 11  0.118882 -0.057700  5.932700   0.118882 -0.057700  6.067300  0.0010
+GW 22 11  0.126094 -0.064912  5.932700   0.126094 -0.064912  6.067300  0.0010
+GW 23 11  0.133306 -0.072124  5.932700   0.133306 -0.072124  6.067300  0.0010
+GW 24 11  0.140519 -0.079337  5.932700   0.140519 -0.079337  6.067300  0.0010
+GW 25 11  0.147731 -0.086549  5.932700   0.147731 -0.086549  6.067300  0.0010
+GE 1
+GN 2 0 0 0 13 0.005
+EX 0 1 6 0 1 0
+FR 0 1 0 0 2450.000 0
+RP 0 37 73 0 0.0 0.0 2.5 5.0 0.0 0.0
+EN

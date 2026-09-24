@@ -1,0 +1,21 @@
+CM Laird/Cushcraft PLC1669 - 9-element Yagi-Uda, 166-174 MHz band
+CM Geometry reverse-engineered from Cushcraft mfg drawing PLC1669 Rev AA (via DigiKey)
+CM Center freq set to Motus 166.380 MHz. Horizontal polarization (elements horizontal).
+CM Element radius assumed uniform 3/8" OD (0.0047625 m) - not given on drawing, minor effect on pattern.
+CM Boom axis = X, elements run along Y, height = Z. Feed = driven element (tag 2), center segment.
+CE
+GW 1 11  0.27305 -0.44450 6.0   0.27305  0.44450 6.0  0.0047625
+GW 2 11  0.00000 -0.42148 6.0   0.00000  0.42148 6.0  0.0047625
+GW 3 11 -0.25400 -0.39291 6.0  -0.25400  0.39291 6.0  0.0047625
+GW 4 11 -0.56674 -0.36989 6.0  -0.56674  0.36989 6.0  0.0047625
+GW 5 11 -0.94139 -0.36513 6.0  -0.94139  0.36513 6.0  0.0047625
+GW 6 11 -1.42875 -0.36036 6.0  -1.42875  0.36036 6.0  0.0047625
+GW 7 11 -1.91611 -0.35560 6.0  -1.91611  0.35560 6.0  0.0047625
+GW 8 11 -2.43999 -0.35163 6.0  -2.43999  0.35163 6.0  0.0047625
+GW 9 11 -2.98450 -0.34687 6.0  -2.98450  0.34687 6.0  0.0047625
+GE 1
+GN 2 0 0 0 13 0.005
+EX 0 2 6 0 1 0
+FR 0 1 0 0 166.380 0
+RP 0 37 73 0 0.0 0.0 2.5 5.0 0.0 0.0
+EN

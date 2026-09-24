@@ -1,0 +1,804 @@
+<meta charset="utf-8">
+<title>2.4 GHz BLE Tag Range</title>
+<meta name="description" content="Interactive link-budget and range-envelope model for 2.4 GHz BLE beacon tags received on a ground-based 11-element Yagi, across six terrain types.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --ink: #1c2321;
+    --ink-dim: #5a625e;
+    --line: #dcd9d0;
+    --line-strong: #b9b4a6;
+    --accent: #4a5fc1;
+    --accent-soft: #e3e6fa;
+
+    --c-quiet: #4a5fc1;
+    --c-typical: #a3852a;
+    --c-noisy: #c15b2a;
+    --c-horizon: #8a8478;
+
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14181a;
+      --surface: #1b2124;
+      --ink: #eceae4;
+      --ink-dim: #a4a99f;
+      --line: #303834;
+      --line-strong: #454f49;
+      --accent: #8b9df0;
+      --accent-soft: #232a4d;
+
+      --c-quiet: #8b9df0;
+      --c-typical: #cfa94a;
+      --c-noisy: #e08356;
+      --c-horizon: #9a988c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181a;
+    --surface: #1b2124;
+    --ink: #eceae4;
+    --ink-dim: #a4a99f;
+    --line: #303834;
+    --line-strong: #454f49;
+    --accent: #8b9df0;
+    --accent-soft: #232a4d;
+
+    --c-quiet: #8b9df0;
+    --c-typical: #cfa94a;
+    --c-noisy: #e08356;
+    --c-horizon: #9a988c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    padding: clamp(20px, 4vw, 48px) 16px 40px;
+  }
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  header h1 {
+    font-size: clamp(24px, 3.4vw, 32px);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  header p {
+    margin: 0;
+    color: var(--ink-dim);
+    max-width: 62ch;
+    line-height: 1.55;
+    font-size: 15px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: clamp(16px, 2.6vw, 28px);
+  }
+
+  .terrain-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: clamp(12px, 2vw, 18px) clamp(16px, 2.6vw, 28px);
+  }
+  .terrain-bar-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+  .terrain-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .terrain-btn {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .terrain-btn:hover { border-color: var(--accent); }
+  .terrain-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .terrain-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--line);
+    display: inline-block;
+    margin: 0 2px;
+  }
+  .compare-btn { font-weight: 500; }
+  .compare-btn.active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
+
+  .assumptions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px 28px;
+  }
+  .assumptions dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    margin-bottom: 3px;
+  }
+  .assumptions dd {
+    margin: 0;
+    font-size: 14.5px;
+  }
+  .assumptions dd.sub {
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .assumptions .val {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+  }
+
+  .chart-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .chart-head h2 {
+    font-size: 17px;
+    margin: 0;
+  }
+  .chart-sub {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--ink-dim);
+    line-height: 1.5;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .swatch {
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .swatch.dash {
+    background: repeating-linear-gradient(90deg, var(--c-horizon) 0 4px, transparent 4px 7px);
+  }
+  .swatch.ref {
+    background: repeating-linear-gradient(90deg, var(--ink-dim) 0 3px, transparent 3px 6px);
+  }
+
+  svg { width: 100%; height: auto; display: block; }
+  .gridline { stroke: var(--line); stroke-width: 1; }
+  .axis-line { stroke: var(--line-strong); stroke-width: 1; }
+  .tick-label { fill: var(--ink-dim); font-size: 11px; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .axis-label { fill: var(--ink-dim); font-size: 12px; }
+  .curve { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+  .horizon-line { fill: none; stroke: var(--c-horizon); stroke-width: 1.6; stroke-dasharray: 4 5; }
+  .ref-line { stroke: var(--ink-dim); stroke-width: 1.4; stroke-dasharray: 3 5; }
+  .ref-label { fill: var(--ink-dim); font-size: 11px; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .terrain-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .tlegend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .tlegend-item.active { color: var(--ink); font-weight: 600; }
+
+  .subchart-title {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-dim);
+    margin: 22px 0 8px;
+  }
+  .subchart-title:first-of-type { margin-top: 4px; }
+
+  canvas.heatmap {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+  }
+  .colorbar { margin-top: 20px; }
+  .colorbar-track {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(to right, #1e2224 0%, #4a5fc1 28.6%, #a3852a 50%, #c15b2a 64.3%, #e6af5a 100%);
+    position: relative;
+  }
+  .colorbar-ticks {
+    position: relative;
+    height: 40px;
+  }
+  .colorbar-ticks .tick {
+    position: absolute;
+    top: 6px;
+    transform: translateX(-50%);
+    font-size: 10.5px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--ink-dim);
+    text-align: center;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .colorbar-ticks .tick b {
+    display: block;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: right;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    color: var(--ink-dim);
+    font-weight: 500;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .tbl-wrap { overflow-x: auto; }
+  .tbl-note {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    line-height: 1.55;
+  }
+
+  .notes h2 { font-size: 16px; margin: 0 0 10px; }
+  .notes ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 9px; }
+  .notes li { line-height: 1.55; font-size: 14px; color: var(--ink); }
+  .notes b { font-weight: 600; }
+
+  footer {
+    color: var(--ink-dim);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+</style>
+
+<div class="page">
+  <div class="card terrain-bar">
+    <div class="terrain-bar-label">Ground / terrain type</div>
+    <div class="terrain-buttons" id="terrain-buttons">
+      <button type="button" class="terrain-btn active" data-terrain="average">Average ground</button>
+      <button type="button" class="terrain-btn" data-terrain="desert">Desert</button>
+      <button type="button" class="terrain-btn" data-terrain="seawater">Seawater</button>
+      <button type="button" class="terrain-btn" data-terrain="forest">Forest</button>
+      <button type="button" class="terrain-btn" data-terrain="freshwater">Freshwater</button>
+      <button type="button" class="terrain-btn" data-terrain="grassland">Grassland</button>
+      <span class="terrain-sep"></span>
+      <button type="button" class="terrain-btn compare-btn" id="compare-btn">Compare all terrains</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>2.4&nbsp;GHz BLE Tag &mdash; Range &amp; Link Budget</h1>
+    <p>A companion to the VHF Nanotag range tool, rebuilt for 2.4&nbsp;GHz Bluetooth Low Energy beacon tags received on a ground-mounted 11-element 2450&nbsp;MHz Yagi (WA5VJB &ldquo;Cheap Yagi&rdquo;). Same free-space + NEC2-antenna-pattern methodology; RF parameters here are reasoned assumptions for a compact BLE tag rather than a specific published product spec.</p>
+  </header>
+
+  <section class="card assumptions mono-nums">
+    <div>
+      <dt>Tag output power</dt>
+      <dd class="val">0.0 dBm</dd>
+    </div>
+    <div>
+      <dt>Tag antenna gain (assumed)</dt>
+      <dd class="val">&minus;3.0 dBi</dd>
+      <dd class="sub">EIRP &asymp; &minus;3.0 dBm total &mdash; assumption, see notes</dd>
+    </div>
+    <div>
+      <dt>Frequency</dt>
+      <dd class="val">2440 MHz (ch. 0&ndash;39 midband)</dd>
+    </div>
+    <div>
+      <dt>Receive antenna</dt>
+      <dd class="val">11-el. Yagi (WA5VJB Cheap Yagi), 6 m AGL, over <span id="terrain-inline">average ground</span></dd>
+    </div>
+    <div>
+      <dt>Propagation model</dt>
+      <dd class="val">Free&#8209;space (Friis), LOS only</dd>
+    </div>
+    <div>
+      <dt>Signal format</dt>
+      <dd class="val">BLE advertising PDU</dd>
+      <dd class="sub">1M PHY assumed; interval/duty cycle is deployment-dependent</dd>
+    </div>
+    <div>
+      <dt>Receiver sensitivity floor</dt>
+      <dd class="val">&minus;93 / &minus;85 / &minus;78 dBm</dd>
+      <dd class="sub">quiet / typical / noisy station, ~2 MHz BW</dd>
+    </div>
+    <div>
+      <dt>Reference range (quiet, low alt.)</dt>
+      <dd class="val">~2 km</dd>
+      <dd class="sub">reference line on both charts</dd>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="chart-head">
+      <h2>Max. range vs. tag altitude</h2>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--c-quiet)"></span>quiet station (-93 dBm)</span>
+        <span><span class="swatch" style="background:var(--c-typical)"></span>typical station (-85 dBm)</span>
+        <span><span class="swatch" style="background:var(--c-noisy)"></span>noisy station (-78 dBm)</span>
+        <span><span class="swatch dash"></span>radio horizon</span>
+        <span><span class="swatch ref"></span>~2 km reference</span>
+      </div>
+    </div>
+    <p class="chart-sub" id="chart-mode-note">Showing <b>average ground</b>.</p>
+    <svg id="chart" viewBox="0 0 860 480" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="terrain-legend" id="terrain-legend" hidden></div>
+  </section>
+
+  <section class="card heatmap-shell">
+    <div class="chart-head">
+      <h2>Signal strength field</h2>
+      <div class="legend">
+        <span><span class="swatch ref"></span>~2 km reference</span>
+        <span><span class="swatch dash"></span>radio horizon</span>
+      </div>
+    </div>
+    <p class="chart-sub">Every point is the modelled received power P<sub>rx</sub>(dBm) for that exact distance/altitude pair under the selected ground type &mdash; not just whether it clears a threshold. Dashed contours are the same quiet/typical/noisy boundaries as the chart above.</p>
+
+    <h3 class="subchart-title">0&ndash;3 km &mdash; honed in near the ~2 km reference</h3>
+    <canvas class="heatmap" id="heatmap-mid" width="860" height="480"></canvas>
+
+    <h3 class="subchart-title">0&ndash;0.5 km &mdash; near field, high detail</h3>
+    <canvas class="heatmap" id="heatmap-near" width="860" height="480"></canvas>
+
+    <div class="colorbar">
+      <div class="colorbar-track"></div>
+      <div class="colorbar-ticks">
+        <div class="tick" style="left:0%">-113<br>dBm<br>no signal</div>
+        <div class="tick" style="left:28.6%"><b>-93</b>quiet<br>floor</div>
+        <div class="tick" style="left:50%"><b>-85</b>typical<br>floor</div>
+        <div class="tick" style="left:64.3%"><b>-78</b>noisy<br>floor</div>
+        <div class="tick" style="left:100%">-53<br>dBm<br>strong</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Altitude AGL</th><th>Quiet</th><th>Typical</th><th>Noisy</th><th>Radio horizon</th></tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+    <p class="tbl-note" id="tbl-note"></p>
+  </section>
+
+  <section class="card notes">
+    <h2>Reading this chart</h2>
+    <ul>
+      <li><b>Same modelling approach as the VHF Nanotag tool</b>, adapted for a 2.4&nbsp;GHz BLE beacon tag: free-space path loss, an NEC2-simulated ground antenna pattern per terrain, and a per-terrain ground-roughness floor of &minus;15&nbsp;dB on the receive antenna's modelled gain.</li>
+      <li>The receive antenna is an 11-element 2450&nbsp;MHz Yagi (WA5VJB &ldquo;Cheap Yagi,&rdquo; a real published Kent Britain design), vertically polarized, at 6&nbsp;m AGL &mdash; simulated fresh in NEC2 for this tool.</li>
+      <li><b>Range envelope is altitude-limited even more sharply than the 434&nbsp;MHz tool.</b> This Yagi's usable elevation lobes are concentrated below roughly 10&deg;, and 2.4&nbsp;GHz path loss is steep, so quiet/typical/noisy range collapses toward a small near-overhead value above roughly 300&#8211;600&nbsp;m AGL. Treat this tool as a <b>ground-level / low-altitude</b> range model &mdash; it is not well suited to high-flying tags.</li>
+      <li>The chart and heatmaps are scaled to this system's own useful envelope (a few km, under ~500&nbsp;m AGL) rather than the VHF tool's 130&nbsp;km/3000&nbsp;m axes.</li>
+      <li>Tag output is modelled as <b>0.0&nbsp;dBm conducted (1&nbsp;mW, typical BLE Class&nbsp;2/nRF52&#8209;class radio) + &minus;3.0&nbsp;dBi antenna &asymp; &minus;3.0&nbsp;dBm EIRP</b> &mdash; these are assumption-driven parameters (no single published BLE wildlife tag spec was available to anchor them to), chosen to be representative of a compact PCB/chip-antenna BLE beacon tag rather than any specific product.</li>
+      <li>Receiver sensitivity scenarios use the same AGC-reference formula as the other two tools, evaluated at BLE's much wider ~2&nbsp;MHz channel bandwidth, with an 8&nbsp;dB / 15&nbsp;dB quiet&#8594;noisy spread.</li>
+      <li>No vegetation canopy loss, body-shadowing, Bluetooth channel-hopping/coding-scheme gain (e.g. BLE Long Range / Coded PHY), or multipath fading beyond the ground-roughness floor is modelled. A tag using Coded PHY would out-range this model; one using standard 1M PHY advertising will roughly match it.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Link budget: P<sub>rx</sub>(dBm) = 0.0 + (&minus;3.0) &minus; FSPL(2440&nbsp;MHz, d) + G<sub>rx</sub>(terrain, elevation), floored at &minus;15&nbsp;dB. FSPL(dB) = 32.44 + 20&middot;log&#8321;&#8320;(f<sub>MHz</sub>) + 20&middot;log&#8321;&#8320;(d<sub>km</sub>), horizontal distance only. Sensitivity thresholds: &minus;174 + NF + SNR + 10&middot;log&#8321;&#8320;(2&middot;BW) + fade margin. Radio horizon: 4.12&middot;(&radic;h<sub>ant</sub> + &radic;h<sub>tag</sub>) km. Elevation-gain patterns computed in NEC2 (nec2++/PyNEC), 1&deg; resolution, 6 ground types.
+  </footer>
+</div>
+
+<script>
+const ALTS=[0,1,2,3,4,5,6,8,10,15,20,25,30,35,40,45,50,75,100,125,150,175,200,225,250,275,300,325,350,375,400,425,450,475,500,525,550,575,600,625,650,675,700,725,750,775,800,825,850,875,900,925,950,975,1000,1025,1050,1075,1100,1125,1150,1175,1200,1225,1250,1275,1300,1325,1350,1375,1400,1425,1450,1475,1500,1525,1550,1575,1600,1625,1650,1675,1700,1725,1750,1775,1800,1825,1850,1875,1900,1925,1950,1975,2000,2025,2050,2075,2100,2125,2150,2175,2200,2225,2250,2275,2300,2325,2350,2375,2400,2425,2450,2475,2500,2525,2550,2575,2600,2625,2650,2675,2700,2725,2750,2775,2800,2825,2850,2875,2900,2925,2950,2975,3000];
+const HOR=[10.09,14.21,15.92,17.23,18.33,19.3,20.18,21.75,23.12,26.05,28.52,30.69,32.66,34.47,36.15,37.73,39.22,45.77,51.29,56.15,60.55,64.59,68.36,71.89,75.23,78.41,81.45,84.37,87.17,89.88,92.49,95.03,97.49,99.89,102.22,104.49,106.71,108.89,111.01,113.09,115.13,117.13,119.1,121.03,122.92,124.79,126.62,128.43,130.21,131.96,133.69,135.4,137.08,138.74,140.38,142,143.6,145.18,146.74,148.28,149.81,151.32,152.81,154.29,155.76,157.21,158.64,160.06,161.47,162.87,164.25,165.62,166.98,168.32,169.66,170.98,172.3,173.6,174.89,176.17,177.45,178.71,179.96,181.21,182.44,183.67,184.89,186.1,187.3,188.49,189.68,190.86,192.03,193.19,194.34,195.49,196.63,197.77,198.89,200.01,201.13,202.24,203.34,204.43,205.52,206.6,207.68,208.75,209.82,210.88,211.93,212.98,214.02,215.06,216.09,217.12,218.14,219.16,220.17,221.18,222.18,223.18,224.17,225.16,226.15,227.13,228.1,229.07,230.04,231,231.96,232.91,233.87,234.81,235.75];
+
+const CURVES={
+  average: {quiet:[0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.133,0.256,0.552,0.839,1.122,1.401,1.678,1.952,2.068,2.104,2.276,1.282,1.515,1.738,1.954,1.413,1.562,1.266,1.311,1.14,0.983,1.023,0.964,0.888,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055], typical:[0,0,0,0,0,0,0,0.121,0.234,0.382,0.416,0.249,0.295,0.338,0.248,0.278,0.227,0.156,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], noisy:[0,0,0,0,0,0,0,0.115,0.129,0.106,0.072,0.057,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  desert: {quiet:[0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.133,0.256,0.552,0.841,1.124,1.403,1.68,1.955,2.118,2.159,2.356,1.297,1.542,1.777,2.005,2.227,1.584,1.745,1.736,1.481,1.545,1.323,1.024,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055], typical:[0,0,0,0,0,0,0,0.121,0.235,0.393,0.432,0.253,0.301,0.347,0.392,0.282,0.314,0.19,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], noisy:[0,0,0,0,0,0,0,0.115,0.133,0.108,0.1,0.09,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  seawater: {quiet:[0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.132,0.255,0.55,0.837,1.119,1.398,1.674,1.937,1.944,1.952,1.989,1.352,1.462,1.288,1.41,1.183,1.301,1.417,1.53,1.303,1.401,1.497,1.307,1.387,1.468,1.305,1.371,1.437,1.167,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055], typical:[0,0,0,0,0,0,0,0.121,0.234,0.349,0.218,0.251,0.221,0.246,0.208,0.232,0.255,0.243,0.193,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], noisy:[0,0,0,0,0,0,0,0.109,0.065,0.077,0.081,0.083,0.084,0.065,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  forest: {quiet:[0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.133,0.256,0.552,0.839,1.122,1.401,1.678,1.952,2.064,2.1,2.27,1.281,1.513,1.735,1.949,1.412,1.56,1.265,1.3,1.123,0.98,1.026,0.966,0.89,0.86,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055], typical:[0,0,0,0,0,0,0,0.121,0.234,0.382,0.415,0.249,0.294,0.338,0.248,0.278,0.227,0.156,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], noisy:[0,0,0,0,0,0,0,0.115,0.128,0.105,0.072,0.057,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  freshwater: {quiet:[0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.132,0.255,0.55,0.836,1.118,1.396,1.672,1.898,1.917,1.937,2.032,1.277,1.431,1.342,1.378,1.21,1.318,1.423,1.214,1.31,1.405,1.498,1.309,1.389,1.468,1.304,1.368,1.113,1.066,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055], typical:[0,0,0,0,0,0,0,0.121,0.233,0.349,0.212,0.241,0.258,0.244,0.213,0.235,0.256,0.244,0.193,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], noisy:[0,0,0,0,0,0,0,0.107,0.115,0.077,0.081,0.083,0.084,0.06,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+  grassland: {quiet:[0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.133,0.256,0.552,0.839,1.122,1.401,1.678,1.952,2.068,2.104,2.276,1.282,1.515,1.738,1.954,1.413,1.562,1.266,1.311,1.14,0.983,1.023,0.964,0.888,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055,0.055], typical:[0,0,0,0,0,0,0,0.121,0.234,0.382,0.416,0.249,0.295,0.338,0.248,0.278,0.227,0.156,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], noisy:[0,0,0,0,0,0,0,0.115,0.129,0.106,0.072,0.057,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+};
+
+const GAINS={
+  average: [-157.05,16.4,17.66,10.3,11.39,16.28,13.48,8.92,14.16,13.63,10.16,12.44,12.61,10.87,11.44,11.2,10.96,10.37,10.03,10.64,8.47,9.96,8.79,7.82,9.26,5.48,8.89,4.01,8.09,2.79,7.26,1.24,6.39,0.79,4.68,3,0.26,4.3,-1.16,0.62,3.2,-1.41,-2.95,1.8,1.44,-3.05,-6.65,-2.11,-0.01,0.1,-0.98,-2.73,-4.74,-6.58,-7.94,-8.64,-8.72,-8.44,-8.23,-8.59,-10.07,-13.52,-20.73,-20.81,-16.08,-16.36,-23.74,-18.61,-15.28,-24.19,-15.43,-17.71,-17.58,-16.76,-18.31,-19.11,-17.61,-27.4,-19.15,-23.47,-31.03,-25.21,-27.49,-35.19,-43.85,-39.9,-37.91,-37.33,-38.56,-42.83,-999.99],
+  desert: [-157.05,16.62,18.11,10.43,11.62,17.25,14.21,6.07,15.37,14.88,6.98,13.41,14.25,8.23,12.19,12.94,8.17,11.65,11,8.27,10.9,8.4,8.95,8.81,7.32,8.09,6.5,6.91,5.8,5.65,5.02,4.38,4.19,3.18,3.18,2.47,1.6,2.19,0.53,0.53,1.16,-0.58,-1.23,0.03,-0.29,-2.18,-3.27,-2.45,-1.73,-1.87,-2.69,-3.88,-5.15,-6.33,-7.34,-8.18,-8.83,-9.29,-9.72,-10.44,-11.89,-14.57,-18.32,-19.36,-17.68,-18.04,-21.37,-19.23,-17.08,-20.74,-16.98,-18.29,-18.27,-17.92,-19,-19.72,-19.15,-23.9,-20.92,-24.21,-28.3,-26.8,-29.18,-34.85,-39.68,-40.1,-39.37,-39.12,-40.39,-44.63,-999.99],
+  seawater: [-157.1,15.93,16.16,10.16,12.87,13.82,11.74,13.46,12.6,10.56,13.99,12.58,8.71,14.02,12.2,7.59,13.97,10.22,9.09,13.45,4.28,11.89,10.16,7.03,11.64,0.21,11.21,-1.1,10.22,-1.22,9.32,-4.55,8.44,-2.53,6.55,3.86,0.43,6.13,-2.65,1.84,4.92,-1.73,-3.15,3.5,2.9,-3.39,-10.24,-0.88,1.59,1.65,0.38,-1.67,-4.09,-6.38,-8,-8.59,-8.28,-7.57,-7.05,-7.23,-8.63,-12.21,-21.46,-21.6,-14.89,-14.97,-24.39,-17.91,-13.91,-26.56,-14.3,-16.57,-16.86,-15.49,-17.59,-17.97,-16.5,-29.66,-17.83,-22.74,-31.99,-23.9,-26.33,-35.05,-48.1,-38.91,-36.63,-36.04,-37.29,-41.6,-999.99],
+  forest: [-157.05,16.38,17.63,10.3,11.39,16.2,13.43,9.09,14.08,13.55,10.33,12.39,12.5,11.01,11.41,11.09,11.1,10.31,9.99,10.76,8.31,10.05,8.8,7.78,9.36,5.32,9.01,3.82,8.19,2.61,7.37,1.04,6.49,0.66,4.76,3.04,0.22,4.4,-1.23,0.65,3.29,-1.43,-3.02,1.88,1.52,-3.07,-6.84,-2.07,0.07,0.18,-0.91,-2.68,-4.71,-6.58,-7.95,-8.64,-8.7,-8.39,-8.17,-8.52,-9.99,-13.47,-20.82,-20.85,-16.02,-16.29,-23.83,-18.57,-15.21,-24.36,-15.37,-17.67,-17.54,-16.7,-18.27,-19.07,-17.54,-27.56,-19.08,-23.43,-31.14,-25.14,-27.43,-35.18,-44.07,-39.87,-37.85,-37.26,-38.49,-42.76,-999.99],
+  freshwater: [-157.04,15.73,16.38,11.02,11.93,13.75,12.71,12.97,11.91,11.6,13.88,11.75,9.77,14,11.44,8.67,13.87,9.46,9.8,13.17,3.93,12.03,9.58,7.67,11.35,1.35,11.08,-1.26,10.15,-1.76,9.25,-4.43,8.3,-1.54,6.27,4.11,-0.17,6.05,-1.98,1.42,4.86,-1.27,-3.76,3.31,2.93,-2.94,-10.9,-1.24,1.41,1.58,0.41,-1.55,-3.86,-6.06,-7.62,-8.24,-8.01,-7.41,-6.99,-7.25,-8.75,-12.46,-22.06,-21.1,-14.85,-15.12,-24.99,-17.73,-14.03,-27.25,-14.25,-16.86,-16.68,-15.71,-17.42,-18.26,-16.45,-30.35,-17.94,-22.58,-32.6,-24.05,-26.32,-34.75,-48.72,-39.23,-36.8,-36.14,-37.35,-41.63,-999.99],
+  grassland: [-157.05,16.4,17.66,10.3,11.39,16.28,13.48,8.92,14.16,13.63,10.16,12.44,12.61,10.87,11.44,11.2,10.96,10.37,10.03,10.64,8.47,9.96,8.79,7.82,9.26,5.48,8.89,4.01,8.09,2.79,7.26,1.24,6.39,0.79,4.68,3,0.26,4.3,-1.16,0.62,3.2,-1.41,-2.95,1.8,1.44,-3.05,-6.65,-2.11,-0.01,0.1,-0.98,-2.74,-4.74,-6.59,-7.94,-8.64,-8.72,-8.44,-8.23,-8.59,-10.07,-13.52,-20.73,-20.81,-16.08,-16.36,-23.74,-18.61,-15.28,-24.19,-15.43,-17.71,-17.58,-16.75,-18.31,-19.11,-17.61,-27.39,-19.15,-23.47,-31.03,-25.21,-27.49,-35.19,-43.85,-39.9,-37.91,-37.33,-38.56,-42.83,-999.99],
+};
+
+const TERRAINS=['average','desert','seawater','forest','freshwater','grassland'];
+const TERRAIN_META={
+  average:   {label:'Average ground', ground:'average ground', dash:''},
+  desert:    {label:'Desert',         ground:'desert ground',  dash:'3,3'},
+  seawater:  {label:'Seawater',       ground:'seawater',       dash:'9,4'},
+  forest:    {label:'Forest',         ground:'forest ground',  dash:'1,3'},
+  freshwater:{label:'Freshwater',     ground:'freshwater',     dash:'9,3,2,3'},
+  grassland: {label:'Grassland',      ground:'grassland',      dash:'2,2'},
+};
+
+const F_MHZ = 2440.0;
+const PTX_DBM = 0.0;
+const GTAG_DBI = -3.0;
+const ANT_HEIGHT_M = 6.0;
+const GROUND_ROUGHNESS_FLOOR_DB = -15.0;
+
+let selectedTerrain = 'average';
+let compareAll = false;
+
+function gainAt(terrain, elevDeg) {
+  const arr = GAINS[terrain];
+  const e = Math.max(0, Math.min(90, elevDeg));
+  const i0 = Math.floor(e), i1 = Math.min(90, i0+1);
+  const t = e - i0;
+  return arr[i0] + t*(arr[i1]-arr[i0]);
+}
+function fsplDb(dKm) {
+  const d = Math.max(dKm, 0.02);
+  return 20*Math.log10(d) + 20*Math.log10(F_MHZ) + 32.44;
+}
+function elevationDeg(altM, dKm) {
+  const dM = dKm*1000.0;
+  if (dM <= 0) return 90.0;
+  return Math.atan2(altM - ANT_HEIGHT_M, dM) * 180/Math.PI;
+}
+function rxPowerDbm(terrain, altM, dKm) {
+  const elev = elevationDeg(altM, dKm);
+  const grx = Math.max(gainAt(terrain, elev), GROUND_ROUGHNESS_FLOOR_DB);
+  return PTX_DBM + GTAG_DBI - fsplDb(dKm) + grx;
+}
+
+const ns = 'http://www.w3.org/2000/svg';
+function el(tag, attrs) {
+  const e = document.createElementNS(ns, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function pathFor(xScale, yScale, xs, ys, clampMax) {
+  let d = '';
+  for (let i=0;i<xs.length;i++) {
+    const x = Math.min(xs[i], clampMax);
+    const px = xScale(x), py = yScale(ys[i]);
+    d += (i===0 ? 'M' : 'L') + px.toFixed(2) + ' ' + py.toFixed(2) + ' ';
+  }
+  return d.trim();
+}
+
+function renderChart() {
+  const svg = document.getElementById('chart');
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const W = 860, H = 480;
+  const M = {top: 16, right: 24, bottom: 48, left: 64};
+  const plotW = W - M.left - M.right;
+  const plotH = H - M.top - M.bottom;
+  const xMax = 3, yMax = 500;
+  const xScale = km => M.left + (km/xMax)*plotW;
+  const yScale = alt => M.top + plotH - (alt/yMax)*plotH;
+
+  for (let km=0; km<=xMax; km+=0.5) {
+    svg.appendChild(el('line', {class:'gridline', x1:xScale(km), y1:M.top, x2:xScale(km), y2:M.top+plotH}));
+    const t = el('text', {class:'tick-label', x:xScale(km), y:M.top+plotH+18, 'text-anchor':'middle'});
+    t.textContent = km;
+    svg.appendChild(t);
+  }
+  for (let alt=0; alt<=yMax; alt+=50) {
+    svg.appendChild(el('line', {class:'gridline', x1:M.left, y1:yScale(alt), x2:M.left+plotW, y2:yScale(alt)}));
+    const t = el('text', {class:'tick-label', x:M.left-10, y:yScale(alt)+4, 'text-anchor':'end'});
+    t.textContent = alt;
+    svg.appendChild(t);
+  }
+  svg.appendChild(el('line', {class:'axis-line', x1:M.left, y1:M.top, x2:M.left, y2:M.top+plotH}));
+  svg.appendChild(el('line', {class:'axis-line', x1:M.left, y1:M.top+plotH, x2:M.left+plotW, y2:M.top+plotH}));
+
+  const xLabel = el('text', {class:'axis-label', x:M.left+plotW/2, y:H-8, 'text-anchor':'middle'});
+  xLabel.textContent = 'Horizontal distance from tower (km)';
+  svg.appendChild(xLabel);
+  const yLabel = el('text', {class:'axis-label', x:0, y:0, 'text-anchor':'middle', transform:`translate(16 ${M.top+plotH/2}) rotate(-90)`});
+  yLabel.textContent = 'Tag altitude AGL (m)';
+  svg.appendChild(yLabel);
+
+  svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,HOR, ALTS, xMax), stroke:'var(--c-horizon)', 'stroke-dasharray':'4 5'}));
+
+  if (!compareAll) {
+    const c = CURVES[selectedTerrain];
+    svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,c.noisy, ALTS, xMax), stroke:'var(--c-noisy)'}));
+    svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,c.typical, ALTS, xMax), stroke:'var(--c-typical)'}));
+    svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,c.quiet, ALTS, xMax), stroke:'var(--c-quiet)'}));
+  } else {
+    ['noisy','typical','quiet'].forEach(scn => {
+      const color = scn==='noisy' ? 'var(--c-noisy)' : (scn==='typical' ? 'var(--c-typical)' : 'var(--c-quiet)');
+      TERRAINS.forEach(terr => {
+        const meta = TERRAIN_META[terr];
+        const isSel = terr === selectedTerrain;
+        const p = el('path', {
+          class:'curve',
+          d: pathFor(xScale,yScale,CURVES[terr][scn], ALTS, xMax),
+          stroke: color,
+          opacity: isSel ? '1' : '0.5',
+          'stroke-width': isSel ? '2.8' : '1.5',
+        });
+        if (meta.dash) p.setAttribute('stroke-dasharray', meta.dash);
+        svg.appendChild(p);
+      });
+    });
+  }
+
+  const refX = xScale(2);
+  svg.appendChild(el('line', {class:'ref-line', x1:refX, y1:M.top, x2:refX, y2:M.top+plotH}));
+  const refLabel = el('text', {class:'ref-label', x:refX+6, y:M.top+14});
+  refLabel.textContent = '~2 km';
+  svg.appendChild(refLabel);
+
+  document.getElementById('terrain-legend').hidden = !compareAll;
+  document.getElementById('chart-mode-note').innerHTML = compareAll
+    ? `Comparing all six ground types &mdash; colour marks the noise scenario, line style marks the terrain. <b>${TERRAIN_META[selectedTerrain].label}</b> is bolded; pick a different terrain button to bold that one instead.`
+    : `Showing <b>${TERRAIN_META[selectedTerrain].label}</b>.`;
+}
+
+function renderTerrainLegend() {
+  const wrap = document.getElementById('terrain-legend');
+  wrap.innerHTML = '';
+  TERRAINS.forEach(terr => {
+    const meta = TERRAIN_META[terr];
+    const item = document.createElement('span');
+    item.className = 'tlegend-item' + (terr===selectedTerrain ? ' active' : '');
+    const s = document.createElementNS(ns, 'svg');
+    s.setAttribute('width', '22'); s.setAttribute('height', '8'); s.setAttribute('viewBox', '0 0 22 8');
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1','0'); ln.setAttribute('y1','4'); ln.setAttribute('x2','22'); ln.setAttribute('y2','4');
+    ln.setAttribute('stroke', 'var(--ink-dim)'); ln.setAttribute('stroke-width','2');
+    if (meta.dash) ln.setAttribute('stroke-dasharray', meta.dash);
+    s.appendChild(ln);
+    item.appendChild(s);
+    const txt = document.createElement('span');
+    txt.textContent = meta.label;
+    item.appendChild(txt);
+    wrap.appendChild(item);
+  });
+}
+
+const STOPS = [
+  [-113,  30, 34, 36],
+  [-96,  32, 46, 52],
+  [-93,  36, 84, 99],
+  [-88,  52,100,112],
+  [-85, 130,108, 54],
+  [-81,  142,116, 58],
+  [-78, 150, 80, 47],
+  [-53, 172, 98, 62],
+];
+function colorFor(dbm) {
+  if (dbm <= STOPS[0][0]) return STOPS[0].slice(1);
+  if (dbm >= STOPS[STOPS.length-1][0]) return STOPS[STOPS.length-1].slice(1);
+  for (let i=0;i<STOPS.length-1;i++) {
+    const [d0,r0,g0,b0] = STOPS[i], [d1,r1,g1,b1] = STOPS[i+1];
+    if (dbm >= d0 && dbm <= d1) {
+      const t = (dbm-d0)/(d1-d0);
+      return [r0+t*(r1-r0), g0+t*(g1-g0), b0+t*(b1-b0)];
+    }
+  }
+  return STOPS[STOPS.length-1].slice(1);
+}
+
+function renderHeatmap(canvasId, xMaxKm, yMaxM) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = 860, H = 480;
+  const M = {top: 16, right: 24, bottom: 48, left: 64};
+  const plotW = W - M.left - M.right;
+  const plotH = H - M.top - M.bottom;
+  const xScale = km => M.left + (km/xMaxKm)*plotW;
+  const yScale = alt => M.top + plotH - (alt/yMaxM)*plotH;
+
+  ctx.fillStyle = '#1e2224';
+  ctx.fillRect(0,0,W,H);
+
+  const block = 4;
+  for (let py=M.top; py<M.top+plotH; py+=block) {
+    const alt = yMaxM*(1 - (py-M.top)/plotH);
+    for (let px=M.left; px<M.left+plotW; px+=block) {
+      const km = (px-M.left)/plotW*xMaxKm;
+      const dbm = rxPowerDbm(selectedTerrain, alt, km);
+      const [r,g,b] = colorFor(dbm);
+      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+      ctx.fillRect(px,py,block,block);
+    }
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(M.left, M.top, plotW, plotH);
+  ctx.clip();
+
+  function strokePath(xs, ys, color, dash) {
+    ctx.beginPath();
+    ctx.setLineDash(dash || []);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    let started = false;
+    for (let i=0;i<xs.length;i++) {
+      const px = xScale(xs[i]), py = yScale(ys[i]);
+      if (!started) { ctx.moveTo(px,py); started = true; }
+      else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  const c = CURVES[selectedTerrain];
+  strokePath(HOR, ALTS, '#c9c4b6', [4,5]);
+  strokePath(c.noisy, ALTS, '#e6af5a', [3,3]);
+  strokePath(c.typical, ALTS, '#d7b862', [3,3]);
+  strokePath(c.quiet, ALTS, '#7fc4d8', [3,3]);
+
+  const showRef = xMaxKm >= 2;
+  let refX = null;
+  if (showRef) {
+    refX = xScale(2);
+    ctx.beginPath();
+    ctx.setLineDash([3,5]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 1.4;
+    ctx.moveTo(refX, M.top);
+    ctx.lineTo(refX, M.top+plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+
+  if (showRef) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.fillText('~2 km', refX+6, M.top+14);
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(M.left, M.top); ctx.lineTo(M.left, M.top+plotH); ctx.lineTo(M.left+plotW, M.top+plotH);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+  ctx.textAlign = 'center';
+  const xStep = xMaxKm <= 0.5 ? 0.05 : (xMaxKm <= 3 ? 0.5 : 20);
+  for (let km=0; km<=xMaxKm+1e-9; km+=xStep) {
+    ctx.fillText(xMaxKm <= 0.5 ? km.toFixed(2) : Math.round(km), xScale(km), M.top+plotH+18);
+  }
+  ctx.textAlign = 'right';
+  const yStep = yMaxM <= 300 ? 25 : (yMaxM <= 1500 ? 100 : 500);
+  for (let alt=0; alt<=yMaxM+1e-9; alt+=yStep) {
+    ctx.fillText(alt, M.left-10, yScale(alt)+4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.font = '12px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillText('Horizontal distance from tower (km)', M.left+plotW/2, H-8);
+  ctx.save();
+  ctx.translate(16, M.top+plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('Tag altitude AGL (m)', 0, 0);
+  ctx.restore();
+}
+
+function firstCross(arr, thresh) {
+  for (let i=0;i<arr.length;i++) { if (arr[i] >= thresh) return ALTS[i]; }
+  return null;
+}
+
+function renderTable() {
+  const c = CURVES[selectedTerrain];
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = '';
+  const rows = [0,10,25,50,75,100,150,200,300,400,600,800,1000];
+  rows.forEach(alt => {
+    const i = ALTS.reduce((best,v,idx)=> Math.abs(v-alt)<Math.abs(ALTS[best]-alt)?idx:best, 0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${ALTS[i]} m</td><td>${c.quiet[i].toFixed(2)} km</td><td>${c.typical[i].toFixed(2)} km</td><td>${c.noisy[i].toFixed(2)} km</td><td>${HOR[i].toFixed(1)} km</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const qAlt = firstCross(c.quiet, 2);
+  const tAlt = firstCross(c.typical, 2);
+  const maxNoisy = Math.max(...c.noisy);
+  const label = TERRAIN_META[selectedTerrain].label.toLowerCase();
+  let note = `Crossing ~2 km (${label}): `;
+  note += qAlt!=null ? `quiet station first reaches it at ~${qAlt} m AGL, ` : `quiet station never reaches it (tops out ~${Math.max(...c.quiet).toFixed(2)} km), `;
+  note += tAlt!=null ? `typical at ~${tAlt} m AGL; ` : `typical never reaches it (tops out ~${Math.max(...c.typical).toFixed(2)} km); `;
+  note += maxNoisy >= 2 ? `noisy stations do reach it, topping out around ${maxNoisy.toFixed(2)} km.` : `noisy stations never quite reach it, topping out around ${maxNoisy.toFixed(2)} km.`;
+  document.getElementById('tbl-note').textContent = note;
+}
+
+function updateAll() {
+  document.getElementById('terrain-inline').textContent = TERRAIN_META[selectedTerrain].ground;
+  renderChart();
+  renderTerrainLegend();
+  renderHeatmap('heatmap-mid', 3, 500);
+  renderHeatmap('heatmap-near', 0.5, 100);
+  renderTable();
+}
+
+document.querySelectorAll('.terrain-btn[data-terrain]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedTerrain = btn.dataset.terrain;
+    document.querySelectorAll('.terrain-btn[data-terrain]').forEach(b => b.classList.toggle('active', b===btn));
+    updateAll();
+  });
+});
+document.getElementById('compare-btn').addEventListener('click', () => {
+  compareAll = !compareAll;
+  document.getElementById('compare-btn').classList.toggle('active', compareAll);
+  updateAll();
+});
+
+updateAll();
+</script>

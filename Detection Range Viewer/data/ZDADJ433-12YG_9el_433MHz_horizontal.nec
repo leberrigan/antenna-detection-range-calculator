@@ -1,0 +1,58 @@
+CM SYNTHESIZED 9-element Yagi matched to ZDA Communications ZDADJ433-12YG
+CM (datasheet: 433 MHz Directional Antenna, item ZDADJ433-12YG).
+CM
+CM Extracted target specs from datasheet:
+CM   Freq range      428-438 MHz (center 433.0 MHz used here)
+CM   Gain            12 dBi
+CM   Polarization    Horizontal/Vertical (mechanically adjustable - see
+CM                   companion file *_vertical.nec, same rotation trick
+CM                   used for PLC1669_9el_166MHz_vertical.nec)
+CM   Beamwidth       45 deg (H-plane) / 35 deg (V-plane)
+CM   VSWR            <= 1.5
+CM   Front-to-Back   >= 15 dB
+CM   Impedance       50 ohm, N-female, 200 W max
+CM   Elements        9
+CM   Boom length     1175 mm
+CM
+CM THIS IS NOT A REVERSE-ENGINEERED COPY - the datasheet does not publish
+CM per-element lengths or spacing, only the aggregate specs above. Geometry
+CM was DERIVED from the validated PLC1669_9el_166MHz.nec taper (real mfg
+CM drawing) as follows:
+CM   1. Frequency-scaled all 9 PLC1669 element lengths and spacings by
+CM      166.380/433.000 (=0.384249), preserving the proven taper shape.
+CM   2. Uniformly COMPRESSED spacing only (not lengths) by 0.93871x so
+CM      total boom length lands exactly on the datasheet's 1175 mm spec.
+CM      (PLC1669's own 9-element taper freq-scales to a slightly longer
+CM      boom, 1.2517 m, than this product's 1.175 m - compressing spacing
+CM      a bit is a normal design move, trades a little bandwidth for a
+CM      tighter package, consistent with the tighter 45/35 deg beamwidths.)
+CM Element count (9) matches the datasheet exactly, so no truncation of
+CM PLC1669's director sequence was needed this time.
+CM
+CM CAVEAT: gain/beamwidth/F-B/VSWR against the targets above were NOT
+CM verified by re-running NEC here. Expect the driven element length and
+CM reflector spacing to need a few percent of retuning for zero feed
+CM reactance once you run this through NEC2/4nec2/xnec2c.
+CM
+CM Element radius frequency-scaled from PLC1669's 3/8" OD stock to
+CM 0.00183 m (~3.6 mm dia, ~1/8" rod) - swap for actual stock size.
+CM Boom axis = X, elements along Y (HORIZONTAL polarization), height
+CM Z = 6.0 m (change to match your mount). Feed = driven element (tag 2),
+CM center segment. Ground = average (er=13, sigma=0.005 S/m) - swap GN
+CM line for another terrain the same way as the other files in this set.
+CE
+GW 1 11  0.09849 -0.17080 6.0   0.09849  0.17080 6.0  0.00183
+GW 2 11  0.00000 -0.16635 6.0   0.00000  0.16635 6.0  0.00183
+GW 3 11 -0.09162 -0.15148 6.0  -0.09162  0.15148 6.0  0.00183
+GW 4 11 -0.20442 -0.14213 6.0  -0.20442  0.14213 6.0  0.00183
+GW 5 11 -0.33956 -0.14030 6.0  -0.33956  0.14030 6.0  0.00183
+GW 6 11 -0.51535 -0.13847 6.0  -0.51535  0.13847 6.0  0.00183
+GW 7 11 -0.69114 -0.13664 6.0  -0.69114  0.13664 6.0  0.00183
+GW 8 11 -0.88010 -0.13511 6.0  -0.88010  0.13511 6.0  0.00183
+GW 9 11 -1.07651 -0.13328 6.0  -1.07651  0.13328 6.0  0.00183
+GE 1
+GN 2 0 0 0 13 0.005
+EX 0 2 6 0 1 0
+FR 0 1 0 0 433.000 0
+RP 0 37 73 0 0.0 0.0 2.5 5.0 0.0 0.0
+EN

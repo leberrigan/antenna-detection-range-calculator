@@ -1,0 +1,3507 @@
+<meta charset="UTF-8">
+<title>PLC1669 Radiation Patterns</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#eef1f4;
+    --surface:#ffffff;
+    --surface-2:#e4e9ee;
+    --panel-bg:rgba(255,255,255,0.86);
+    --panel-border:#c7d0d9;
+    --text:#111620;
+    --text-muted:#5a6472;
+    --hairline:#c7d0d9;
+    --accent:#a8481a;
+    --accent-ink:#ffffff;
+    --accent-soft:#f2ddc9;
+    --focus:#2f6fed;
+    --grid-line:#9aa5b1;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0a0d13;
+      --surface:#121826;
+      --surface-2:#1a2130;
+      --panel-bg:rgba(18,24,38,0.82);
+      --panel-border:#2b3446;
+      --text:#e9edf4;
+      --text-muted:#8d96a6;
+      --hairline:#2b3446;
+      --accent:#e58a45;
+      --accent-ink:#1a0e04;
+      --accent-soft:#3a2a18;
+      --focus:#6ea3ff;
+      --grid-line:#3a4457;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a0d13;
+    --surface:#121826;
+    --surface-2:#1a2130;
+    --panel-bg:rgba(18,24,38,0.82);
+    --panel-border:#2b3446;
+    --text:#e9edf4;
+    --text-muted:#8d96a6;
+    --hairline:#2b3446;
+    --accent:#e58a45;
+    --accent-ink:#1a0e04;
+    --accent-soft:#3a2a18;
+    --focus:#6ea3ff;
+    --grid-line:#3a4457;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+    overflow:hidden;
+  }
+  .mono{ font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
+
+  .app{
+    position:fixed;
+    inset:0;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    display:flex;
+    flex-direction:column;
+  }
+
+  header.topbar{
+    flex:0 0 auto;
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--hairline);
+    background:var(--surface);
+    z-index:5;
+    flex-wrap:wrap;
+    row-gap:2px;
+  }
+  .model-select-wrap{
+    position:relative;
+    display:flex;
+    align-items:center;
+  }
+  select.model-select{
+    appearance:none;
+    -webkit-appearance:none;
+    margin:0;
+    padding:2px 22px 2px 0;
+    border:none;
+    background:transparent;
+    color:var(--text);
+    font-family:"IBM Plex Mono",monospace;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.01em;
+    cursor:pointer;
+    border-radius:4px;
+  }
+  select.model-select:hover{ color:var(--accent); }
+  select.model-select:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+  .model-select-wrap::after{
+    content:"";
+    position:absolute;
+    right:6px;
+    top:50%;
+    width:7px;
+    height:7px;
+    border-right:2px solid var(--text-muted);
+    border-bottom:2px solid var(--text-muted);
+    transform:translateY(-70%) rotate(45deg);
+    pointer-events:none;
+  }
+  header.topbar .meta{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11.5px;
+    color:var(--text-muted);
+    letter-spacing:0.02em;
+  }
+  header.topbar .meta b{ color:var(--text); font-weight:600; }
+  header.topbar .sep{ color:var(--hairline); }
+  .view-toggle{ margin-left:auto; align-self:center; }
+  .view-toggle .seg-btn{ flex:0 0 auto; padding:6px 12px; }
+
+  main.stage{
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
+  }
+  #gl{
+    position:absolute;
+    inset:0;
+  }
+  #gl canvas{ display:block; touch-action:none; }
+
+  .panel{
+    background:var(--panel-bg);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    box-shadow:0 8px 24px -12px rgba(0,0,0,0.35);
+  }
+
+  .hud{
+    position:absolute;
+    left:16px;
+    top:16px;
+    bottom:16px;
+    width:272px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    z-index:4;
+    pointer-events:none;
+  }
+  .hud .panel{ pointer-events:auto; }
+
+  .panel-title{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:0.09em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    padding:10px 12px 0;
+  }
+
+  .terrain-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    padding:8px 10px 10px;
+  }
+  .terrain-btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:7px 8px;
+    border-radius:7px;
+    border:1px solid var(--hairline);
+    background:var(--surface-2);
+    color:var(--text);
+    font-family:"IBM Plex Sans",sans-serif;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    text-align:left;
+    line-height:1.15;
+  }
+  .terrain-btn:hover{ border-color:var(--accent); }
+  .terrain-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .terrain-btn .swatch{
+    flex:0 0 auto;
+    width:9px; height:9px; border-radius:50%;
+    box-shadow:0 0 0 2px color-mix(in srgb, currentColor 18%, transparent);
+  }
+  .terrain-btn[aria-pressed="true"]{
+    background:var(--accent-soft);
+    border-color:var(--accent);
+    color:var(--text);
+  }
+  .terrain-btn[aria-pressed="true"] .name{ font-weight:700; }
+
+  .seg-group{ display:flex; gap:6px; }
+  .seg-btn{
+    flex:1 1 0;
+    padding:7px 6px;
+    border-radius:7px;
+    border:1px solid var(--hairline);
+    background:var(--surface-2);
+    color:var(--text);
+    font-family:"IBM Plex Sans",sans-serif;
+    font-size:11.5px;
+    font-weight:500;
+    cursor:pointer;
+    text-align:center;
+    line-height:1.3;
+  }
+  .seg-btn small{ display:block; font-weight:400; color:var(--text-muted); font-size:9.5px; margin-top:1px; }
+  .seg-btn:hover{ border-color:var(--accent); }
+  .seg-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .seg-btn[aria-pressed="true"]{
+    background:var(--accent-soft);
+    border-color:var(--accent);
+  }
+  .seg-btn[aria-pressed="true"] small{ color:var(--text); }
+  .seg-btn:disabled{ opacity:0.4; cursor:default; }
+  .seg-btn:disabled:hover{ border-color:var(--hairline); }
+
+  .link-assumptions{
+    padding:0 12px 10px;
+    font-size:10px;
+    color:var(--text-muted);
+    font-family:"IBM Plex Mono",monospace;
+    line-height:1.45;
+  }
+
+  .ctrl-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:8px 12px;
+    border-top:1px solid var(--hairline);
+  }
+  .ctrl-row:first-of-type{ border-top:none; }
+  .ctrl-row label{ font-size:12px; color:var(--text-muted); }
+
+  .slider-row{ flex-direction:column; align-items:stretch; gap:6px; }
+
+  .range-head{ display:flex; align-items:baseline; justify-content:space-between; }
+  .range-value{ font-size:12px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+  .range-value-wrap{ display:flex; align-items:baseline; gap:3px; }
+  .range-value-input{
+    font-family:inherit; font-size:12px; font-weight:600; color:var(--text);
+    font-variant-numeric:tabular-nums; text-align:right;
+    width:3.4em; padding:0 1px 1px; margin:0;
+    background:transparent; border:none; border-bottom:1px dashed var(--text-muted);
+    border-radius:0;
+  }
+  .range-value-input:hover{ border-bottom-color:var(--text); }
+  .range-value-input:focus{ outline:none; border-bottom:1px solid var(--accent); }
+  .range-value-unit{ font-size:12px; font-weight:600; color:var(--text); }
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:4px; margin:5px 0 2px;
+    border-radius:999px;
+    background:var(--hairline);
+    outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--accent);
+    border:2px solid var(--surface);
+    box-shadow:0 1px 2px rgba(0,0,0,0.3);
+    cursor:pointer;
+  }
+  input[type="range"]::-moz-range-track{ height:4px; border-radius:999px; background:var(--hairline); }
+  input[type="range"]::-moz-range-thumb{
+    width:16px; height:16px; border-radius:50%;
+    background:var(--accent); border:2px solid var(--surface);
+    box-shadow:0 1px 2px rgba(0,0,0,0.3); cursor:pointer;
+  }
+  input[type="range"]:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+  .range-ticks{
+    display:flex; justify-content:space-between;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:9.5px; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--text-muted);
+  }
+
+  .switch{
+    display:inline-block;
+    position:relative;
+    width:34px; height:19px;
+    flex:0 0 auto;
+  }
+  .switch input{ position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
+  .switch .track{
+    position:absolute; inset:0;
+    background:var(--hairline);
+    border-radius:999px;
+    transition:background .15s;
+  }
+  .switch .thumb{
+    position:absolute; top:2px; left:2px;
+    width:15px; height:15px;
+    border-radius:50%;
+    background:var(--surface);
+    box-shadow:0 1px 2px rgba(0,0,0,0.3);
+    transition:transform .15s;
+  }
+  .switch input:checked + .track{ background:var(--accent); }
+  .switch input:checked + .track + .thumb{ transform:translateX(15px); }
+  .switch input:focus-visible + .track{ outline:2px solid var(--focus); outline-offset:2px; }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1px;
+    background:var(--hairline);
+    border-top:1px solid var(--hairline);
+    margin-top:2px;
+  }
+  .stat{
+    background:var(--panel-bg);
+    padding:8px 12px 10px;
+  }
+  .stat .k{
+    font-size:9.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    font-family:"IBM Plex Mono",monospace;
+  }
+  .stat .v{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:15px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    margin-top:2px;
+  }
+  .stat .v small{ font-size:10px; font-weight:500; color:var(--text-muted); }
+  .ground-note{
+    padding:8px 12px 11px;
+    font-size:11px;
+    color:var(--text-muted);
+    font-family:"IBM Plex Mono",monospace;
+    line-height:1.5;
+    border-top:1px solid var(--hairline);
+  }
+  .ground-note b{ color:var(--text); font-weight:600; }
+
+  .legend{
+    position:absolute;
+    right:16px;
+    top:16px;
+    z-index:4;
+    display:flex;
+    align-items:stretch;
+    gap:8px;
+    padding:10px 10px 10px 12px;
+  }
+  .legend .bar{
+    width:14px;
+    border-radius:4px;
+    background:linear-gradient(to top, var(--lg-stops));
+    border:1px solid var(--panel-border);
+  }
+  .legend .ticks{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:10px;
+    color:var(--text-muted);
+    font-variant-numeric:tabular-nums;
+  }
+  .legend .cap{
+    position:absolute;
+    left:-2px; top:-20px;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:9.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    white-space:nowrap;
+  }
+
+  .tooltip{
+    position:fixed;
+    z-index:20;
+    pointer-events:none;
+    background:var(--surface);
+    border:1px solid var(--panel-border);
+    border-radius:8px;
+    padding:7px 10px;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11.5px;
+    line-height:1.55;
+    box-shadow:0 10px 24px -10px rgba(0,0,0,0.4);
+    transform:translate(-50%,-115%);
+    white-space:nowrap;
+  }
+  .tooltip .g{ font-size:14px; font-weight:700; color:var(--accent); }
+  .tooltip[hidden]{ display:none; }
+
+  .hint{
+    position:absolute;
+    left:50%;
+    bottom:14px;
+    transform:translateX(-50%);
+    z-index:3;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:10.5px;
+    color:var(--text-muted);
+    background:var(--panel-bg);
+    border:1px solid var(--panel-border);
+    border-radius:999px;
+    padding:6px 13px;
+    backdrop-filter:blur(8px);
+    letter-spacing:0.01em;
+  }
+
+  @media (max-width:760px){
+    header.topbar{ padding:10px 14px; }
+    header.topbar .meta{ display:none; }
+    .hud{
+      left:10px; right:10px; top:auto; bottom:10px; width:auto;
+      max-height:46vh;
+    }
+    .hud .panel{ overflow-y:auto; }
+    .terrain-grid{ grid-template-columns:1fr 1fr 1fr; }
+    .legend{ top:auto; bottom:10px; right:10px; padding:8px; }
+    .legend .bar{ width:10px; }
+    .hint{ display:none; }
+  }
+
+  #view2d{
+    position:absolute;
+    inset:16px 16px 16px calc(272px + 32px);
+    display:flex;
+    flex-wrap:wrap;
+    align-content:flex-start;
+    gap:12px;
+    z-index:4;
+    overflow:auto;
+  }
+  .plot-panel{
+    flex:1 1 380px;
+    min-width:280px;
+    max-width:560px;
+    height:320px;
+    display:flex;
+    flex-direction:column;
+  }
+  .plot-panel-wide{ flex:2 1 560px; max-width:none; }
+  .plot-panel .panel-title{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .plot-sub{ font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted); font-size:10px; white-space:nowrap; }
+  .plot-body{ flex:1 1 auto; min-height:0; padding:2px 10px 10px; }
+  .plot-body canvas{ width:100%; height:100%; display:block; }
+  .field-colorbar{ margin:0 10px 10px; flex:0 0 auto; }
+  .field-colorbar-track{
+    height:8px;
+    border-radius:4px;
+    background:linear-gradient(to right, #1e2224 0%, #1c5d6e 28.6%, #a3852a 50%, #c15b2a 64.3%, #e6af5a 100%);
+  }
+  .field-colorbar-ticks{ position:relative; height:24px; margin-top:2px; }
+  .field-colorbar-ticks span{
+    position:absolute;
+    top:0;
+    transform:translateX(-50%);
+    font-family:"IBM Plex Mono",monospace;
+    font-size:9px;
+    color:var(--text-muted);
+    white-space:nowrap;
+    text-align:center;
+  }
+  .field-colorbar-ticks span b{ display:block; color:var(--text); font-weight:600; font-size:9.5px; }
+
+  @media (max-width:760px){
+    #view2d{ inset:10px 10px calc(46vh + 16px) 10px; }
+    .plot-panel{ height:220px; }
+    .view-toggle .seg-btn{ padding:6px 9px; font-size:11px; }
+  }
+
+  .hud{ overflow-y:auto; }
+
+  .antenna-chips{ display:flex; flex-wrap:wrap; gap:6px; padding:8px 12px 2px; }
+  .antenna-chip{
+    display:flex; align-items:center; gap:5px;
+    padding:5px 9px;
+    border-radius:999px;
+    border:1px solid var(--hairline);
+    background:var(--surface-2);
+    color:var(--text);
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .antenna-chip:hover{ border-color:var(--accent); }
+  .antenna-chip[aria-pressed="true"]{ background:var(--accent-soft); border-color:var(--accent); }
+  .antenna-chip .dot{ width:7px; height:7px; border-radius:50%; background:var(--text-muted); flex:0 0 auto; }
+  .antenna-chip[data-enabled="true"] .dot{ background:#3fae5a; }
+  .antenna-chip .warn{ color:#c15b2a; font-size:10px; }
+
+  .tower-panel{
+    position:absolute;
+    right:16px;
+    bottom:16px;
+    width:132px;
+    z-index:4;
+    padding-bottom:6px;
+  }
+  .tower-panel canvas{ display:block; width:100%; height:260px; }
+  .tower-panel .panel-title{
+    display:flex; justify-content:space-between; align-items:center;
+    cursor:pointer; user-select:none;
+  }
+  .tower-panel .panel-title .chevron{ transition:transform 0.15s ease; font-size:9px; }
+  .tower-panel.collapsed{ padding-bottom:0; }
+  .tower-panel.collapsed canvas{ display:none; }
+  .tower-panel.collapsed .panel-title .chevron{ transform:rotate(-90deg); }
+  @media (max-width:760px){ .tower-panel{ display:none; } }
+
+  .antenna-section{ width:100%; }
+  .antenna-section-head{
+    width:100%;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    padding:2px 2px 0;
+  }
+  .antenna-section-head b{ color:var(--text); }
+  .antenna-section-plots{ display:flex; flex-wrap:wrap; gap:12px; width:100%; }
+  #view2dEmpty{
+    width:100%;
+    padding:40px 20px;
+    text-align:center;
+    color:var(--text-muted);
+    font-family:"IBM Plex Mono",monospace;
+    font-size:13px;
+  }
+
+  [hidden]{ display:none !important; }
+  :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <span class="mono" style="font-weight:700; font-size:16px;">Detection Range Viewer</span>
+    <span class="meta"><span id="polMeta">H-pol</span><span class="sep"> &middot; </span><b id="heightMeta">6.0</b> m AGL<span class="sep"> &middot; </span>NEC-2 MoM, gain in dBi<span class="sep"> &middot; </span><span id="antennaCountMeta">1 antenna</span></span>
+    <div class="seg-group view-toggle" role="group" aria-label="View mode">
+      <button type="button" class="seg-btn" id="view3dBtn" aria-pressed="true">3D dome</button>
+      <button type="button" class="seg-btn" id="view2dBtn" aria-pressed="false">2D plots</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div id="gl" role="img" aria-label="Interactive 3D detection-range surface for the selected Yagi antenna, estimated from a Motus tag link budget, orbit with mouse or touch"></div>
+
+    <div class="hud">
+      <section class="panel" aria-label="Antennas">
+        <div class="panel-title">Antennas</div>
+        <div class="antenna-chips" id="antennaChips" role="tablist" aria-label="Antenna instances"></div>
+        <div class="ctrl-row">
+          <button type="button" class="seg-btn" id="addAntennaBtn">+ Add antenna</button>
+          <button type="button" class="seg-btn" id="removeAntennaBtn">Remove</button>
+        </div>
+        <div class="ctrl-row">
+          <label for="instEnabledToggle">Enabled</label>
+          <label class="switch"><input type="checkbox" id="instEnabledToggle" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="ctrl-row slider-row">
+          <label id="instModelLabel" for="instModelSelect">Model</label>
+          <select id="instModelSelect" class="model-select mono" aria-labelledby="instModelLabel" style="background:var(--surface-2); border:1px solid var(--hairline); border-radius:7px; padding:6px 8px;"></select>
+        </div>
+        <div class="ctrl-row slider-row">
+          <label id="instPolLabel">Polarization</label>
+          <div class="seg-group" role="group" aria-labelledby="instPolLabel">
+            <button type="button" class="seg-btn" id="instPolHBtn" aria-pressed="true">Horizontal</button>
+            <button type="button" class="seg-btn" id="instPolVBtn" aria-pressed="false">Vertical</button>
+            <button type="button" class="seg-btn" id="instPolCBtn" aria-pressed="false">Circular</button>
+          </div>
+        </div>
+        <div class="ctrl-row slider-row" id="instHeightRow" hidden>
+          <div class="range-head">
+            <label id="instHeightLabel" for="instHeightSlider">Height (AGL)</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="decimal" class="range-value-input" id="instHeightValue" value="6.0" aria-label="Height in meters AGL">
+              <span class="range-value-unit">m</span>
+            </span>
+          </div>
+          <input type="range" id="instHeightSlider" min="1" max="30" step="0.5" value="6" aria-labelledby="instHeightLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="instHeadingLabel" for="instHeadingSlider">Heading</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="instHeadingValue" value="0" aria-label="Heading in degrees">
+              <span class="range-value-unit">&deg;</span>
+            </span>
+          </div>
+          <input type="range" id="instHeadingSlider" min="0" max="359" step="1" value="0" aria-labelledby="instHeadingLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <label id="instMountLabel">Mount</label>
+          <div class="seg-group" role="group" aria-labelledby="instMountLabel">
+            <button type="button" class="seg-btn" id="instMountButtBtn" aria-pressed="false">Butt</button>
+            <button type="button" class="seg-btn" id="instMountMidBtn" aria-pressed="true">Midpoint</button>
+          </div>
+        </div>
+        <div class="link-assumptions" id="instWarningNote" style="padding:0 12px 8px" hidden></div>
+      </section>
+
+      <section class="panel" aria-label="Combining">
+        <div class="panel-title">Dome mode</div>
+        <div class="ctrl-row slider-row">
+          <div class="seg-group" role="group" aria-label="Dome mode">
+            <button type="button" class="seg-btn" id="domeCombinedBtn" aria-pressed="true">Combined</button>
+            <button type="button" class="seg-btn" id="domeSingleBtn" aria-pressed="false">Single</button>
+          </div>
+        </div>
+        <div class="ctrl-row slider-row" id="combineModeRow">
+          <div class="seg-group" role="group" aria-label="Combine mode">
+            <button type="button" class="seg-btn" id="combineUnionBtn" aria-pressed="true">Union</button>
+            <button type="button" class="seg-btn" id="combineMeasuredBtn" aria-pressed="false" disabled>Measured coupling</button>
+            <button type="button" class="seg-btn" id="combineLiveBtn" aria-pressed="false" disabled>Live coupling</button>
+          </div>
+          <div class="link-assumptions" id="measuredCouplingNote" style="padding:4px 0 0" hidden></div>
+        </div>
+        <div class="ctrl-row slider-row" id="coupledOpacityRow" hidden>
+          <div class="range-head">
+            <label id="coupledOpacityLabel" for="coupledOpacitySlider">Other antenna opacity</label>
+            <span class="range-value mono" id="coupledOpacityValue">35%</span>
+          </div>
+          <input type="range" id="coupledOpacitySlider" min="0.1" max="1" step="0.05" value="0.35" aria-labelledby="coupledOpacityLabel">
+        </div>
+        <div class="ctrl-row slider-row" id="liveCouplingRow" hidden>
+          <button type="button" class="seg-btn" id="computeCouplingBtn" style="width:100%">Compute coupling</button>
+          <div class="link-assumptions" id="liveCouplingNote" style="padding:4px 0 0"></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Terrain selection">
+        <div class="panel-title">Ground / terrain</div>
+        <div class="terrain-grid" id="terrainGrid" role="tablist" aria-label="Ground terrain"></div>
+        <div class="link-assumptions" id="heightNote" style="padding:0 12px 10px">Live two-ray ground-reflection model on the free-space pattern &mdash; no effect on Free space terrain.</div>
+      </section>
+
+      <section class="panel" aria-label="Measurement">
+        <div class="panel-title">Receiver sensitivity</div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="noiseLabel" for="noiseSlider">Noise floor</label>
+            <span class="range-value mono" id="noiseValue">&minus;105 dBm</span>
+          </div>
+          <input type="range" id="noiseSlider" min="-120" max="-95" step="5" value="-105" aria-labelledby="noiseLabel">
+          <div class="range-ticks"><span>Quiet</span><span>Typical</span><span>Noisy</span></div>
+        </div>
+        <div class="ctrl-row slider-row">
+          <label id="thresholdLabel">Detection threshold</label>
+          <div class="seg-group" role="group" aria-labelledby="thresholdLabel">
+            <button type="button" class="seg-btn" id="threshMinBtn" aria-pressed="false">Min detectable<small>6 dB SNR</small></button>
+            <button type="button" class="seg-btn" id="threshP50Btn" aria-pressed="true">50% probability<small>12 dB SNR</small></button>
+            <button type="button" class="seg-btn" id="threshP95Btn" aria-pressed="false">95% probability<small>15 dB SNR</small></button>
+          </div>
+          <div class="link-assumptions" id="snrOffsetNote" style="padding:6px 0 0"></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Metrics" style="flex:1 1 auto; display:flex; flex-direction:column;">
+        <div class="panel-title" id="envLabel">Metrics</div>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="k">Max range</div>
+            <div class="v mono" id="statRange">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Peak gain</div>
+            <div class="v mono" id="statPeak">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Take-off angle</div>
+            <div class="v mono" id="statTakeoff">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Front / back</div>
+            <div class="v mono" id="statFB">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Beamwidth (az)</div>
+            <div class="v mono" id="statBW">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Threshold used</div>
+            <div class="v mono" id="statThresh">&mdash;</div>
+          </div>
+        </div>
+        <div class="ground-note" id="groundNote">&mdash;</div>
+        <div class="link-assumptions" id="linkAssumptions">Link budget: <span id="tagNote">0.1&nbsp;mW tag &middot; &minus;6&nbsp;dBi tag antenna</span> &middot; <span id="fsplFreqMeta">166.38</span>&nbsp;MHz free-space path loss</div>
+      </section>
+
+      <section class="panel" aria-label="Display controls">
+        <div class="panel-title">Display</div>
+        <div class="ctrl-row">
+          <label for="wireToggle">Show mesh lines</label>
+          <label class="switch"><input type="checkbox" id="wireToggle"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="ctrl-row">
+          <label for="rotateToggle">Auto-rotate</label>
+          <label class="switch"><input type="checkbox" id="rotateToggle"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+      </section>
+    </div>
+
+    <div class="legend panel" id="legendPanel" aria-hidden="true">
+      <span class="cap">km</span>
+      <div class="bar" id="legendBar"></div>
+      <div class="ticks" id="legendTicks"></div>
+    </div>
+
+    <div class="panel tower-panel" id="towerPanel" aria-label="Antenna tower diagram">
+      <div class="panel-title" id="towerToggle" role="button" tabindex="0" aria-expanded="true" aria-controls="towerCanvas">Tower<span class="chevron">&#9662;</span></div>
+      <canvas id="towerCanvas"></canvas>
+    </div>
+
+    <div class="hint" id="hintBar">drag to orbit &middot; scroll to zoom &middot; hover surface for range</div>
+    <div class="tooltip" id="tooltip" hidden><span class="g" id="ttGain"></span><br><span id="ttAngles"></span></div>
+
+    <div id="view2d" hidden>
+      <div id="view2dEmpty" hidden>No antennas enabled &mdash; enable at least one antenna to see its plots.</div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // populated once patterns.json loads, from whatever terrain keys it contains
+  var ENV_ORDER = [];
+  var ENV_META = {};
+  var GROUND_PALETTE = ["#6b7566","#c9a066","#355c3a","#3a7ca5","#6f9b3f","#234066","#8a5a8f","#a65b53"];
+
+  // canonical ground types, mirroring parse_nec.py's CANONICAL_TERRAINS, so any
+  // model/polarization with just a freeSpace baseline can offer the full
+  // terrain roster via the live two-ray ground model (see currentGainGrid).
+  var CANONICAL_GROUNDS = [
+    {key:"average",    eps:13, sigma:0.005,   label:"Average Ground"},
+    {key:"desert",     eps:3,  sigma:0.00015, label:"Desert / Very Dry Sand"},
+    {key:"forest",     eps:13, sigma:0.006,   label:"Forested Soil"},
+    {key:"grassland",  eps:14, sigma:0.01,    label:"Open Grassland / Farmland"},
+    {key:"freshwater", eps:80, sigma:0.01,    label:"Over Fresh Water / Lake"},
+    {key:"seawater",   eps:81, sigma:5.0,     label:"Over Sea / Salt Water"}
+  ];
+  function groundForKey(key, dataset){
+    for (var i=0;i<CANONICAL_GROUNDS.length;i++){
+      if (CANONICAL_GROUNDS[i].key === key) return {eps: CANONICAL_GROUNDS[i].eps, sigma: CANONICAL_GROUNDS[i].sigma};
+    }
+    return dataset && dataset[key] && dataset[key].ground;
+  }
+
+  var R_OUTER = 4.6;
+  var R_MIN = 0.10;
+  var AXIS_MAX_KM = 20;   // fixed scene-unit <-> km scale; ranges beyond this clamp to the outer edge
+
+  // ---- link budget: convert receive-antenna gain (dBi) into an estimated
+  // detection range (km) for a tag, via free-space (Friis) propagation.
+  // Ground-reflection loss is already baked into the NEC-2 gain pattern per
+  // terrain, so no extra path-loss term is added for that here.
+  // The tag transmitter itself differs by band, not just the receive antenna:
+  // classic 166 MHz Motus tags vs. CTT's 434 MHz tags have different power
+  // and antenna specs, so EIRP is keyed per receive-antenna model (they share
+  // a band) rather than being one global constant. An unlisted model falls
+  // back to the classic Motus profile until its tag's specs are supplied.
+  // Decode method also differs by band, not just the transmitter: classic
+  // 166/151.5/150.1 MHz Lotek tags send PPM (Pulse Position Modulation) -
+  // a burst of 4 short pulses repeated every 4-40s, decoded by timing raw
+  // pulse edges against a noise floor - while CTT's 434 MHz tags send a
+  // known 32-bit FSK-modulated burst at 25kbps (124.2kHz bandwidth) every
+  // 2-20s, which a matched-filter/correlator receiver can decode at much
+  // lower per-sample SNR than edge-timing detection (a real, textbook
+  // effect - correlating a known N-bit sequence buys up to ~10*log10(N) dB
+  // of processing gain, i.e. ~15dB ceiling for N=32).
+  //
+  // IMPORTANT: for the FSK tag, that correlator-SNR advantage is over the
+  // RECEIVER'S OWN noise, not automatically over whatever the state.noise
+  // slider is set to. state.noise models ambient/environmental RF noise at
+  // the antenna, and for a narrowband PPM receiver that's normally the
+  // binding constraint (its own front-end noise floor sits far below any
+  // real-world ambient noise). The 434 MHz CTT hardware (an RFM69HCW-based
+  // dongle) is fundamentally different: it has to admit a much wider
+  // (~124kHz) channel to capture the FSK signal, so kTB thermal noise alone
+  // pushes its OWN noise floor up into roughly the same -115..-100 dBm
+  // range as typical ambient RF noise (see the RFM69HCW datasheet-derived
+  // numbers in "434 fsk receiver sensitivitiy and min snr.md" alongside
+  // this file - NoiseFloor = -174 + 10log10(B_Hz) + NF, chip DemodSnr=8dB).
+  // So for this tag, whichever of (ambient noise, receiver's own hardware
+  // floor) is worse is what actually limits detection - a hardware-floor
+  // term that a pure "ambient noise + small SNR" model (what this used to
+  // be) completely ignores. sensitivityDbm below gives that per-tier
+  // hardware floor (already-final absolute RSSI thresholds, not deltas);
+  // currentThresholdDbm() takes the max of it and the ambient-noise term.
+  // The exact on-chip receiver channel bandwidth (RegRxBw) actually
+  // programmed by the dongle's firmware wasn't confirmed - static analysis
+  // of station_radio_last_commercial.hex found no recognizable RFM69
+  // register-config table (this firmware isn't built on the common
+  // LowPowerLab RFM69 library layout) and no AVR disassembler was available
+  // in this environment to trace the raw SPI writes, so the exact RxBw
+  // register value is unverified. The tiers below instead follow the
+  // reference note's own recommendation: prefer the empirically-anchored
+  // narrow-bandwidth numbers (it states real field-logged RSSI floors
+  // matched the tightest-legal-bandwidth row almost exactly) over the
+  // wide-bandwidth theoretical row, spaced 5dB apart mirroring how the PPM
+  // tiers step up in required margin. None of this is vendor-measured -
+  // treat it as adjustable pending real field/lab data.
+  var TAG_PROFILES = {
+    plc1669: {
+      eirpDbm: 10*Math.log10(0.1) + (-6),  // 0.1 mW Motus/Lotek PPM tag, ~-6 dBi tag antenna
+      note: "0.1&nbsp;mW tag &middot; &minus;6&nbsp;dBi tag antenna &middot; PPM decode (166.380/151.500/150.100&nbsp;MHz Lotek tags)",
+      snrDb: { min: 6, p50: 12, p95: 15 },   // minimum detectable, 50%, 95% detection probability
+      thresholdNote: "Thresholds calibrated to PPM edge-timing detection (Lotek/Motus tags)."
+    },
+    zda433: {
+      eirpDbm: -15.3,   // CTT 434 tag: ~0.03 mW peak, spec'd directly as EIRP
+      note: "CTT 434 tag &middot; 0.03&nbsp;mW peak (&minus;15.3&nbsp;dBm EIRP) &middot; 32-bit FSK correlator decode",
+      snrDb: { min: 1, p50: 1.5, p95: 2 },   // small extra margin ABOVE whichever noise floor binds (see sensitivityDbm)
+      // RFM69HCW hardware noise floor per tier (absolute dBm, not a delta) -
+      // min/p50/p95 = -115/-110/-105 dBm, i.e. the field-matched tight-RxBw
+      // floor, +5dB fading margin, and the wide-RxBw (tag-bandwidth-matched)
+      // floor respectively - see the note above and the reference doc.
+      sensitivityDbm: { min: -115, p50: -110, p95: -105 },
+      thresholdNote: "Threshold is whichever is worse of ambient noise (+1&ndash;2&nbsp;dB SNR) and the CTT/RFM69HCW receiver's own hardware noise floor (&minus;115 to &minus;105&nbsp;dBm depending on tier - a much higher floor than a narrowband PPM receiver's, since this hardware has to admit a much wider ~124&nbsp;kHz channel). Estimates from the RFM69HCW datasheet and known-good field data, not vendor-measured."
+    }
+  };
+  // 2.4 GHz BLE beacon tag profile, shared by every 2450 MHz receive antenna
+  // (WA5VJB Cheap Yagi, HG2412P corner reflector) - same tag either way, only
+  // the receive antenna pattern differs. Reuses the exact assumptions from
+  // the standalone 2400ble_range.html companion tool for consistency: no
+  // single published BLE wildlife-tag spec was available to anchor these to,
+  // so they're reasoned parameters for a compact PCB/chip-antenna BLE beacon
+  // (0 dBm conducted, ~-3 dBi tag antenna) rather than any specific product.
+  // Unlike zda433's narrowband FSK correlator, BLE's much wider ~2 MHz
+  // channel pushes its own receiver noise floor well above any credible
+  // ambient RF noise this app's noise-floor slider models, so sensitivityDbm
+  // alone (not the ambient-noise snrDb branch) is what actually binds here -
+  // see thresholdDbmFor()'s max(ambient, hwFloor).
+  var BLE_TAG_PROFILE = {
+    eirpDbm: -3.0,   // 0 dBm (1 mW) conducted, BLE Class 2/nRF52-class radio, + ~-3 dBi tag antenna
+    note: "0&nbsp;dBm (1&nbsp;mW) BLE tag &middot; &minus;3&nbsp;dBi tag antenna &middot; &minus;3.0&nbsp;dBm EIRP (assumption, no published spec)",
+    snrDb: { min: 2, p50: 3, p95: 4 },   // small extra margin ABOVE whichever noise floor binds (see sensitivityDbm)
+    sensitivityDbm: { min: -93, p50: -85, p95: -78 },
+    thresholdNote: "Threshold is the receiver's own hardware noise floor at BLE's much wider ~2&nbsp;MHz channel bandwidth (&minus;93 to &minus;78&nbsp;dBm depending on quiet/typical/noisy tier), which normally dominates over ambient RF noise for this wide a channel. Reasoned assumptions (same as the standalone 2.4&nbsp;GHz BLE range tool), not vendor-measured."
+  };
+  TAG_PROFILES.wa5vjb_yagi = BLE_TAG_PROFILE;
+  TAG_PROFILES.hg2412p = BLE_TAG_PROFILE;
+  var TAG_PROFILE = TAG_PROFILES.plc1669;             // overwritten per-model by refreshFreqMeta()
+  var TAG_EIRP_DBM = TAG_PROFILE.eirpDbm;             // overwritten per-model by refreshFreqMeta()
+  var FREQ_MHZ = 166.38;                              // overwritten per-model by refreshFreqMeta()
+  var SNR_DB = TAG_PROFILE.snrDb;                     // overwritten per-model by refreshFreqMeta()
+
+  function fsplDb(dKm, fMhz){ return 20*Math.log10(dKm) + 20*Math.log10(fMhz) + 32.44; }
+  // two call shapes: rangeKmFromGain(gainDbi, thresholdDbm) reads the
+  // momentarily-set TAG_EIRP_DBM/FREQ_MHZ globals (today's single-antenna /
+  // "single" dome-mode path, unchanged); rangeKmFromGain(gainDbi, eirpDbm,
+  // freqMhz, thresholdDbm) is the explicit-args form used by the combined
+  // dome, which has no single global frequency/EIRP to read.
+  function rangeKmFromGain(gainDbi, a, b, c){
+    var eirpDbm, freqMhz, thresholdDbm;
+    if (arguments.length >= 4){ eirpDbm = a; freqMhz = b; thresholdDbm = c; }
+    else { eirpDbm = TAG_EIRP_DBM; freqMhz = FREQ_MHZ; thresholdDbm = a; }
+    var rxAt1km = eirpDbm + gainDbi - fsplDb(1, freqMhz);
+    return Math.pow(10, (rxAt1km - thresholdDbm)/20);
+  }
+  function thresholdDbmFor(tagProfile, tier){
+    var ambient = state.noise + tagProfile.snrDb[tier];
+    var hwFloor = tagProfile.sensitivityDbm && tagProfile.sensitivityDbm[tier];
+    return (hwFloor != null) ? Math.max(ambient, hwFloor) : ambient;
+  }
+  function currentThresholdDbm(){ return thresholdDbmFor(TAG_PROFILE, state.threshold); }
+  // per-instance equivalent of currentThresholdDbm() - instance.model picks
+  // the tag profile, state.noise/state.threshold stay global (one physical
+  // site, one receiver-sensitivity assumption for the whole station)
+  function instanceThresholdDbm(instance){
+    var profile = TAG_PROFILES[instance.model] || TAG_PROFILES.plc1669;
+    return thresholdDbmFor(profile, state.threshold);
+  }
+
+  // ---- live ground-reflection model (Option A): rather than needing a
+  // fresh NEC-2 terrain run per antenna height, this applies a Fresnel
+  // two-ray/image-theory reflection factor in the browser on top of a
+  // free-space element pattern, so height and terrain are instant sliders
+  // instead of pre-baked datasets. Trade-off vs. re-solving in NEC-2: this
+  // ignores mutual coupling between the antenna and its own ground image
+  // (fine for the heights/frequencies here - see the project README) and
+  // treats the ground as an infinite flat plane.
+  function cAdd(a,b){ return [a[0]+b[0], a[1]+b[1]]; }
+  function cSub(a,b){ return [a[0]-b[0], a[1]-b[1]]; }
+  function cMul(a,b){ return [a[0]*b[0]-a[1]*b[1], a[0]*b[1]+a[1]*b[0]]; }
+  function cDiv(a,b){ var d=b[0]*b[0]+b[1]*b[1]; return [(a[0]*b[0]+a[1]*b[1])/d, (a[1]*b[0]-a[0]*b[1])/d]; }
+  function cSqrt(a){
+    var r = Math.hypot(a[0], a[1]);
+    var re = Math.sqrt(Math.max(0, (r+a[0])/2));
+    var im = Math.sqrt(Math.max(0, (r-a[0])/2));
+    return [re, a[1] < 0 ? -im : im];
+  }
+  function cAbs(a){ return Math.hypot(a[0], a[1]); }
+  function cExpI(theta){ return [Math.cos(theta), Math.sin(theta)]; }
+
+  // eps/sigma come straight from the terrain's own GN-card data in
+  // patterns.json (see parse_nec.py), not a separate hardcoded table, so the
+  // live model always matches whatever ground each dataset actually used.
+  function groundReflectionDb(elevDeg, heightM, freqMhz, ground, pol){
+    if (!ground || ground.eps==null || ground.sigma==null) return 0;
+    var psi = elevDeg*Math.PI/180;               // grazing angle above the horizon
+    var lambdaM = 299.792458/freqMhz;             // c/f, MHz -> meters
+    var epsC = [ground.eps, -60*ground.sigma*lambdaM];  // complex relative permittivity
+    var sinPsi = Math.sin(psi), cosPsi = Math.cos(psi);
+    var sqrtTerm = cSqrt(cSub(epsC, [cosPsi*cosPsi, 0]));
+    var gamma = (pol === "vertical")
+      ? cDiv(cSub(cMul(epsC,[sinPsi,0]), sqrtTerm), cAdd(cMul(epsC,[sinPsi,0]), sqrtTerm))
+      : cDiv(cSub([sinPsi,0], sqrtTerm), cAdd([sinPsi,0], sqrtTerm));
+    var k = 2*Math.PI/lambdaM;
+    var pathTerm = cMul(gamma, cExpI(2*k*heightM*sinPsi));
+    var mag = cAbs(cAdd([1,0], pathTerm));
+    return 20*Math.log10(Math.max(mag, 1e-6));
+  }
+
+  // builds a full elevation/phi gain grid from a free-space baseline pattern
+  // plus the live reflection factor (elevation-only - the two-ray model
+  // assumes a uniform infinite ground plane, so it doesn't vary with phi)
+  function computeLiveGrid(baseline, ground, heightM, freqMhz, pol){
+    var elevs = baseline.elevDeg, base = baseline.gainDb;
+    var nTb = elevs.length, nPb = baseline.phiDeg.length;
+    var out = new Array(nTb);
+    for (var ti=0; ti<nTb; ti++){
+      var rdb = groundReflectionDb(elevs[ti], heightM, freqMhz, ground, pol);
+      var row = new Array(nPb);
+      for (var pi=0; pi<nPb; pi++) row[pi] = base[ti][pi] + rdb;
+      out[ti] = row;
+    }
+    return out;
+  }
+
+  // true once the given model/polarization dataset has a freeSpace baseline
+  // to build the live model on - otherwise falls back to whatever pre-baked
+  // terrain grids that dataset has (e.g. circular polarization, which has
+  // no freeSpace run yet). Takes an explicit dataset so it works both for the
+  // active antenna instance and (today, still) for the module-level globals.
+  function isLiveModeFor(dataset){ return !!(dataset && dataset.freeSpace); }
+  function isLiveMode(){ return isLiveModeFor(activeAntenna() && activeAntenna().data); }
+
+  // per-instance equivalent of the old global currentGainGrid(): live-computes
+  // via computeLiveGrid() against the shared state.env, or reads a pre-baked
+  // grid, parameterized by the instance instead of a global.
+  function instanceNativeGrid(instance){
+    var dataset = instance.data;
+    var grid;
+    if (isLiveModeFor(dataset) && state.env !== "freeSpace"){
+      var baseline = dataset.freeSpace;
+      grid = computeLiveGrid(baseline, groundForKey(state.env, dataset), instance.heightM, baseline.freqMhz, instance.polarization);
+    } else {
+      var env = dataset[state.env] ? state.env : Object.keys(dataset)[0];
+      grid = dataset[env].gainDb;
+    }
+    // measuredCoupling mode: additive real-NEC coupling correction on top of
+    // whatever grid above (live or baked) - see instanceCoupledDeltaGrid().
+    // Builds a NEW array rather than mutating `grid` in place, since the
+    // non-live branch above returns a direct reference into `dataset`.
+    if (state.combineMode === "measuredCoupling"){
+      var delta = instanceCoupledDeltaGrid(instance);
+      if (delta){
+        grid = grid.map(function(row, ti){
+          return row.map(function(g, pi){ return g + delta[ti][pi]; });
+        });
+      }
+    } else if (state.combineMode === "liveCoupling"){
+      var liveDelta = liveCoupledDeltaGrid(instance);
+      if (liveDelta){
+        grid = grid.map(function(row, ti){
+          return row.map(function(g, pi){ return g + liveDelta[ti][pi]; });
+        });
+      }
+    }
+    return grid;
+  }
+  // instance's own elevDeg/phiDeg arrays for whichever grid instanceNativeGrid
+  // would return (live mode always uses freeSpace's grid shape; non-live mode
+  // uses the selected terrain's own grid shape)
+  function instanceGridShape(instance){
+    var dataset = instance.data;
+    if (isLiveModeFor(dataset)) return { elevDeg: dataset.freeSpace.elevDeg, phiDeg: dataset.freeSpace.phiDeg, freqMhz: dataset.freeSpace.freqMhz };
+    var env = dataset[state.env] ? state.env : Object.keys(dataset)[0];
+    return { elevDeg: dataset[env].elevDeg, phiDeg: dataset[env].phiDeg, freqMhz: dataset[env].freqMhz };
+  }
+  function instanceFreqMhz(instance){ return instanceGridShape(instance).freqMhz; }
+
+  // the gain grid actually shown for the current terrain/height selection -
+  // kept as a thin wrapper over the active antenna instance so existing
+  // single-grid call sites (tooltip, "single" dome mode) are unchanged
+  function currentGainGrid(){ return instanceNativeGrid(activeAntenna()); }
+
+  // ---------------------------------------------------------------- measured mutual-coupling data (third combine mode)
+  // coupled_patterns.json: precomputed free-space NEC coupling deltas for
+  // stacked antenna pairs, one bucket per (model, polarization, relative
+  // heading in {0,45,90,180}, spacing in wavelengths) - see
+  // gen_coupled_pairs.py. Folded/mirrored onto the pair's actual geometry
+  // below, then bilinear-interpolated onto each instance's native elev/phi
+  // grid and added on top of whatever instanceNativeGrid() already computes,
+  // so the live height/terrain model stays fully interactive.
+  var allCoupled = null;
+  var COUPLED_HEADING_BUCKETS = [0, 45, 90, 180];
+
+  function nearestBucket(value, buckets){
+    var best = buckets[0], bestDiff = Infinity;
+    for (var i=0; i<buckets.length; i++){
+      var diff = Math.abs(value - buckets[i]);
+      if (diff < bestDiff){ bestDiff = diff; best = buckets[i]; }
+    }
+    return best;
+  }
+
+  // eligibility + library-bucket lookup for the current enabled antennas:
+  // exactly 2 enabled instances, same model+polarization (non-circular), with
+  // a coupled dataset for that model/polarization. `lo`/`hi` are ordered by
+  // heightM (lo = generator's role A, hi = role B - see
+  // gen_coupled_pairs.py's role convention: role B is always shifted up in Z
+  // relative to role A). Returns null when ineligible.
+  function getCoupledPairInfo(){
+    if (!allCoupled) return null;
+    var insts = enabledAntennas();
+    if (insts.length !== 2) return null;
+    var a = insts[0], b = insts[1];
+    if (a.model !== b.model || a.polarization !== b.polarization) return null;
+    if (a.polarization === "circular") return null;
+    var modelData = allCoupled[a.model];
+    if (!modelData) return null;
+    var polData = modelData[a.polarization];
+    if (!polData) return null;
+
+    var lo = a.heightM <= b.heightM ? a : b;
+    var hi = lo === a ? b : a;
+
+    // heading fold: only 0/45/90/180 were solved in NEC (see plan); a raw
+    // relative heading beyond 180 is the mirror image (negate phi) of
+    // 360-heading, since both baseline antenna geometries are mirror-
+    // symmetric about their own boom plane.
+    var rawHeading = ((hi.headingDeg - lo.headingDeg) % 360 + 360) % 360;
+    var mirror = rawHeading > 180;
+    var foldedHeading = mirror ? 360 - rawHeading : rawHeading;
+    var heading = nearestBucket(foldedHeading, COUPLED_HEADING_BUCKETS);
+    var samples = polData.headings[String(heading)];
+    if (!samples || !samples.length) return null;
+
+    var freqMhz = instanceFreqMhz(lo);
+    var lambdaM = 299.792458 / freqMhz;
+    var spacingLambda = Math.abs(hi.heightM - lo.heightM) / lambdaM;
+    var sample = samples[0], bestDiff = Infinity;
+    samples.forEach(function(s){
+      var diff = Math.abs(s.spacingLambda - spacingLambda);
+      if (diff < bestDiff){ bestDiff = diff; sample = s; }
+    });
+
+    return {
+      loId: lo.id, hiId: hi.id,
+      mirror: mirror,
+      heading: heading, rawHeading: rawHeading,
+      spacingLambda: spacingLambda, sampleSpacingLambda: sample.spacingLambda,
+      coarseElevDeg: polData.coarseElevDeg, coarsePhiDeg: polData.coarsePhiDeg,
+      deltaGridA: sample.deltaGridA, deltaGridB: sample.deltaGridB
+    };
+  }
+
+  // mirrors a coarse delta grid's phi axis (negate phi: index i -> nP-i),
+  // matching the plan's heading-fold mirror convention
+  function mirrorCoarseGrid(grid){
+    var nP = grid[0].length;
+    return grid.map(function(row){
+      var out = new Array(nP);
+      for (var i=0; i<nP; i++) out[i] = row[(nP - i) % nP];
+      return out;
+    });
+  }
+
+  // bilinear interpolation of a coarse (10deg elev x 15deg phi, 0-360 wrap)
+  // delta grid up to an arbitrary target elev/phi grid
+  function bilinearCoupledDelta(coarseElev, coarsePhi, coarseGrid, targetElev, targetPhi){
+    var nE = coarseElev.length, nP = coarsePhi.length;
+    var elStep = coarseElev[1] - coarseElev[0];
+    var phiStep = coarsePhi[1] - coarsePhi[0];
+    var out = new Array(targetElev.length);
+    for (var ti=0; ti<targetElev.length; ti++){
+      var e = Math.max(coarseElev[0], Math.min(coarseElev[nE-1], targetElev[ti]));
+      var ei0 = Math.min(nE-2, Math.floor((e - coarseElev[0]) / elStep));
+      var ei1 = ei0 + 1;
+      var ef = (e - coarseElev[ei0]) / elStep;
+      var row = new Array(targetPhi.length);
+      for (var pi=0; pi<targetPhi.length; pi++){
+        var p = ((targetPhi[pi] % 360) + 360) % 360;
+        var pi0 = Math.floor(p / phiStep) % nP;
+        var pi1 = (pi0 + 1) % nP;
+        var pf = (p - pi0*phiStep) / phiStep;
+        var v00 = coarseGrid[ei0][pi0], v01 = coarseGrid[ei0][pi1];
+        var v10 = coarseGrid[ei1][pi0], v11 = coarseGrid[ei1][pi1];
+        var v0 = v00 + (v01-v00)*pf;
+        var v1 = v10 + (v11-v10)*pf;
+        row[pi] = v0 + (v1-v0)*ef;
+      }
+      out[ti] = row;
+    }
+    return out;
+  }
+
+  // per-instance lookup: null if this instance isn't part of a qualifying
+  // pair right now, otherwise a delta grid already resampled onto the
+  // instance's own native elev/phi grid, ready to add onto its native gain grid
+  function instanceCoupledDeltaGrid(instance){
+    var pairInfo = getCoupledPairInfo();
+    if (!pairInfo) return null;
+    if (instance.id !== pairInfo.loId && instance.id !== pairInfo.hiId) return null;
+    var coarseGrid = instance.id === pairInfo.loId ? pairInfo.deltaGridA : pairInfo.deltaGridB;
+    if (pairInfo.mirror) coarseGrid = mirrorCoarseGrid(coarseGrid);
+    var shape = instanceGridShape(instance);
+    return bilinearCoupledDelta(pairInfo.coarseElevDeg, pairInfo.coarsePhiDeg, coarseGrid, shape.elevDeg, shape.phiDeg);
+  }
+
+  // discrete height/heading picker options for an instance that's part of a
+  // qualifying measuredCoupling pair. Coupling was only ever measured at 4
+  // relative headings (0/45/90/180, each also usable mirrored as
+  // 360-heading - see getCoupledPairInfo) and a handful of spacings per
+  // heading bucket, so rather than letting the sliders roam continuously
+  // and silently snap to the nearest sample under the hood, they're
+  // restricted here to exactly the values that land on a real sample -
+  // computed relative to the OTHER (non-active) instance's current
+  // position, so whichever instance the user is editing gets exact stops.
+  // Returns null when the instance isn't part of a currently-active,
+  // eligible pair (mirrors getCoupledPairInfo's own eligibility exactly).
+  function getCoupledSlotOptions(inst){
+    if (state.combineMode !== "measuredCoupling" || !allCoupled) return null;
+    var pairInfo = getCoupledPairInfo();
+    if (!pairInfo) return null;
+    if (inst.id !== pairInfo.loId && inst.id !== pairInfo.hiId) return null;
+    var partner = antennaById(inst.id === pairInfo.loId ? pairInfo.hiId : pairInfo.loId);
+    if (!partner) return null;
+    var polData = allCoupled[inst.model][inst.polarization];
+
+    var offsets = [];
+    COUPLED_HEADING_BUCKETS.forEach(function(b){
+      var samples = polData.headings[String(b)];
+      if (!samples || !samples.length) return;
+      if (offsets.indexOf(b) === -1) offsets.push(b);
+      var mirrored = (360 - b) % 360;
+      if (offsets.indexOf(mirrored) === -1) offsets.push(mirrored);
+    });
+    offsets.sort(function(a,b){ return a-b; });
+    var headings = offsets.map(function(o){ return ((partner.headingDeg + o) % 360 + 360) % 360; });
+    headings = headings.filter(function(h,i){ return headings.indexOf(h) === i; }).sort(function(a,b){ return a-b; });
+
+    // spacing options for whichever bucket the pair is folded to right now
+    // (availability can differ slightly by bucket - see
+    // gen_coupled_pairs.py's geometry-infeasibility skip for small-spacing
+    // vertical-polarization cases)
+    var samples = polData.headings[String(pairInfo.heading)] || [];
+    var lambdaM = 299.792458 / instanceFreqMhz(inst);
+    var heights = [];
+    samples.forEach(function(s){
+      var dm = s.spacingLambda * lambdaM;
+      heights.push(partner.heightM + dm);
+      if (dm > 1e-9) heights.push(partner.heightM - dm);
+    });
+    heights = heights.filter(function(h){ return h >= 1; }); // matches instHeightSlider's own min="1"
+    heights = heights.filter(function(h,i){ return heights.indexOf(h) === i; }).sort(function(a,b){ return a-b; });
+
+    return { partner: partner, heights: heights, headings: headings };
+  }
+
+  // ---------------------------------------------------------------- live on-demand N-body coupling (third combine mode)
+  // Unlike measuredCoupling's precomputed pair library, this mode POSTs the
+  // exact current instance configuration (continuous heights/headings, no
+  // bucket-snapping) to a local coupling_server.py process for a live NEC
+  // solve covering 2..MAX_ANTENNAS instances at once - see
+  // coupling_server.py's module docstring for the math. Only non-circular
+  // instances (no freeSpace wire geometry to solve for circular pol) that
+  // share one frequency (the server needs a single shared FR card) can
+  // participate; if the enabled set splits across >1 frequency,
+  // participation is blocked entirely rather than silently solving a subset.
+  var LIVE_COUPLING_FREQ_TOL_MHZ = 0.5;
+  function getLiveCouplingParticipants(){
+    var insts = enabledAntennas().filter(function(a){ return a.polarization !== "circular"; });
+    if (insts.length < 2) return null;
+    var freq0 = instanceFreqMhz(insts[0]);
+    for (var i=1; i<insts.length; i++){
+      if (Math.abs(instanceFreqMhz(insts[i]) - freq0) > LIVE_COUPLING_FREQ_TOL_MHZ) return null;
+    }
+    return insts;
+  }
+
+  // stable request signature (id/model/pol/height/heading only) used to
+  // detect whether the currently-shown live-coupling result is stale -
+  // i.e. the instance configuration moved since the last "Compute coupling"
+  // click
+  function liveCouplingSignature(insts){
+    return JSON.stringify(insts.map(function(a){
+      return { id: a.id, model: a.model, polarization: a.polarization, heightM: a.heightM, headingDeg: a.headingDeg };
+    }));
+  }
+
+  // per-instance lookup: null unless this instance is covered by the last
+  // successful live-coupling solve, otherwise a delta grid already
+  // resampled onto the instance's own native elev/phi grid (bilinear
+  // interpolation is generic - same helper measuredCoupling uses)
+  function liveCoupledDeltaGrid(instance){
+    var result = state.liveCoupling.result;
+    if (!result || !result.deltas[instance.id]) return null;
+    var shape = instanceGridShape(instance);
+    return bilinearCoupledDelta(result.coarseElevDeg, result.coarsePhiDeg, result.deltas[instance.id], shape.elevDeg, shape.phiDeg);
+  }
+
+  function nearestOptionIndex(options, value, circular){
+    var bestIdx = 0, bestDiff = Infinity;
+    for (var i=0; i<options.length; i++){
+      var diff = Math.abs(options[i] - value);
+      if (circular) diff = Math.min(diff, 360 - diff);
+      if (diff < bestDiff){ bestDiff = diff; bestIdx = i; }
+    }
+    return bestIdx;
+  }
+
+  function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  // ---- viridis-style perceptual colormap (colorblind-safe, monotonic lightness) ----
+  var STOPS = [
+    [0.00,[68,1,84]],[0.13,[72,40,120]],[0.25,[62,74,137]],[0.38,[49,104,142]],
+    [0.50,[38,130,142]],[0.63,[31,158,137]],[0.75,[53,183,121]],[0.88,[109,205,89]],
+    [1.00,[253,231,37]]
+  ];
+  function viridis(t){
+    t = Math.max(0, Math.min(1, t));
+    for (var i=0;i<STOPS.length-1;i++){
+      var a=STOPS[i], b=STOPS[i+1];
+      if (t>=a[0] && t<=b[0]){
+        var f = (t-a[0])/(b[0]-a[0]);
+        var c0=a[1], c1=b[1];
+        return [
+          c0[0]+(c1[0]-c0[0])*f,
+          c0[1]+(c1[1]-c0[1])*f,
+          c0[2]+(c1[2]-c0[2])*f
+        ];
+      }
+    }
+    return STOPS[STOPS.length-1][1];
+  }
+  function viridisCss(t){ var c=viridis(t); return "rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")"; }
+
+  // ---- signal-strength field colour scale: fixed absolute-dBm bands (not
+  // relative to the current threshold), matching nanotag_range.html's
+  // quiet/typical/noisy station-sensitivity reference tiers ----
+  var FIELD_STOPS = [
+    [-140,[30,34,36]],[-120,[28,93,110]],[-105,[163,133,42]],
+    [-95,[193,91,42]],[-70,[230,175,90]]
+  ];
+  function fieldColorFor(dbm){
+    if (dbm<=FIELD_STOPS[0][0]) return FIELD_STOPS[0][1];
+    var last = FIELD_STOPS[FIELD_STOPS.length-1];
+    if (dbm>=last[0]) return last[1];
+    for (var i=0;i<FIELD_STOPS.length-1;i++){
+      var a=FIELD_STOPS[i], b=FIELD_STOPS[i+1];
+      if (dbm>=a[0] && dbm<=b[0]){
+        var f=(dbm-a[0])/(b[0]-a[0]);
+        return [
+          a[1][0]+(b[1][0]-a[1][0])*f,
+          a[1][1]+(b[1][1]-a[1][1])*f,
+          a[1][2]+(b[1][2]-a[1][2])*f
+        ];
+      }
+    }
+    return last[1];
+  }
+
+  function buildLegendGradient(){
+    var stopsCss = STOPS.map(function(s){ return viridisCss(s[0]) + " " + (s[0]*100) + "%"; }).join(",");
+    document.getElementById("legendBar").parentElement.style.setProperty("--lg-stops", stopsCss);
+  }
+
+  // Multiple antenna instances share one mast, one terrain, one receiver
+  // sensitivity assumption. Each instance carries its own model/polarization/
+  // height/heading/mount and, once loaded, its own `data` (=
+  // allModels[model].polarizations[polarization], same shape as the old
+  // single global state.data). See MAX_ANTENNAS and makeAntennaInstance().
+  var MAX_ANTENNAS = 6;
+  var nextAntennaId = 1;
+  var state = {
+    antennas: [],            // AntennaInstance[]
+    activeAntennaIndex: 0,   // which instance's controls/tower marker are "selected"
+    domeMode: "combined",    // "combined" | "single"
+    combineMode: "union",    // "union" | "measuredCoupling" | "liveCoupling" (meaningful only when domeMode==="combined")
+    coupledOpacity: 0.35,    // material opacity of the non-active dome in measuredCoupling's/liveCoupling's dual-dome view
+    liveCoupling: {
+      status: "idle",         // "idle" | "solving" | "ready" | "stale" | "error"
+      serverAvailable: null,  // null = not probed yet
+      participantIds: [],
+      requestSignature: null,
+      result: null,            // {freqMhz, coarseElevDeg, coarsePhiDeg, deltas:{id:grid}}
+      error: null
+    },
+    env: null,               // set once patterns.json loads - global terrain, shared by all instances
+    view: "3d",              // "3d" dome or "2d" pattern/field plots - gates draw2D()
+    noise: -105,
+    threshold: "p50",
+    wire: false,
+    rotate: false
+  };
+
+  function makeAntennaInstance(model, polarization){
+    return {
+      id: nextAntennaId++,
+      enabled: true,
+      model: model,
+      polarization: polarization,
+      heightM: 6.0,
+      headingDeg: 0,
+      mount: "midpoint",   // "butt" | "midpoint" - cosmetic, tower diagram only
+      data: null
+    };
+  }
+  function activeAntenna(){ return state.antennas[state.activeAntennaIndex] || null; }
+  function enabledAntennas(){ return state.antennas.filter(function(a){ return a.enabled; }); }
+  function antennaById(id){
+    for (var i=0;i<state.antennas.length;i++){ if (state.antennas[i].id===id) return state.antennas[i]; }
+    return null;
+  }
+
+  function cloneGrid(g){ return g.map(function(row){ return row.slice(); }); }
+
+  function radiusForKm(km){
+    var t = Math.max(0, Math.min(1, km/AXIS_MAX_KM));
+    return R_MIN + t*(R_OUTER - R_MIN);
+  }
+  function colorForKm(km){
+    var t = Math.max(0, Math.min(1, km/AXIS_MAX_KM));
+    return viridis(t);
+  }
+  function radiusFor(gainDb, thresholdDbm){ return radiusForKm(rangeKmFromGain(gainDb, thresholdDbm)); }
+  function colorFor(gainDb, thresholdDbm){ return colorForKm(rangeKmFromGain(gainDb, thresholdDbm)); }
+
+  // ---------------------------------------------------------------- three.js
+  var glHost = document.getElementById("gl");
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.05, 200);
+  camera.position.set(7.6, 2.7, 8.4);
+
+  var renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  glHost.appendChild(renderer.domElement);
+
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 3.2;
+  controls.maxDistance = 22;
+  controls.maxPolarAngle = Math.PI*0.56;
+  controls.autoRotate = false;
+  controls.autoRotateSpeed = 1.1;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x30281c, 1.05));
+  var sun = new THREE.DirectionalLight(0xffffff, 0.9);
+  sun.position.set(5, 9, 4);
+  scene.add(sun);
+  var fill = new THREE.DirectionalLight(0xffffff, 0.25);
+  fill.position.set(-6, 3, -5);
+  scene.add(fill);
+
+  // ground disc + grid
+  var groundGeo = new THREE.CircleGeometry(R_OUTER+1.4, 64);
+  var groundMat = new THREE.MeshBasicMaterial({ color:0x6b7566, transparent:true, opacity:0.16, side:THREE.DoubleSide });
+  var groundDisc = new THREE.Mesh(groundGeo, groundMat);
+  groundDisc.rotation.x = -Math.PI/2;
+  groundDisc.position.y = -0.01;
+  scene.add(groundDisc);
+
+  var grid = new THREE.GridHelper(2*(R_OUTER+1.4), 24, 0x9aa5b1, 0x9aa5b1);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.35;
+  scene.add(grid);
+
+  // boresight marker (phi = 0)
+  var boreGroup = new THREE.Group();
+  var boreLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0.01,0), new THREE.Vector3(R_OUTER+1.2,0.01,0)]),
+    new THREE.LineDashedMaterial({ color:0xa8481a, dashSize:0.22, gapSize:0.14, transparent:true, opacity:0.85 })
+  );
+  boreLine.computeLineDistances();
+  boreGroup.add(boreLine);
+  scene.add(boreGroup);
+
+  function makeLabelSprite(text, colorHex){
+    var c = document.createElement("canvas");
+    var scale = 4;
+    c.width = 256*scale/2; c.height = 64*scale/2;
+    var ctx = c.getContext("2d");
+    ctx.font = "700 " + (34*scale/2) + "px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = colorHex || "#ffffff";
+    ctx.fillText(text, c.width/2, c.height/2);
+    var tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearFilter;
+    var mat = new THREE.SpriteMaterial({ map:tex, transparent:true, depthTest:false });
+    var spr = new THREE.Sprite(mat);
+    spr.scale.set(1.5, 0.375, 1);
+    spr.renderOrder = 10;
+    return spr;
+  }
+
+  var azLabels = new THREE.Group();
+  [[0,"0° BORESIGHT"],[90,"90°"],[180,"180° BACK"],[270,"270°"]].forEach(function(d){
+    var rad = d[0]*Math.PI/180;
+    var s = makeLabelSprite(d[1], d[0]===0 ? "#e0863f" : "#8d96a6");
+    var rr = R_OUTER + 1.15;
+    s.position.set(Math.cos(rad)*rr, 0.05, Math.sin(rad)*rr);
+    azLabels.add(s);
+  });
+  scene.add(azLabels);
+
+  var elLabels = new THREE.Group();
+  [0,30,60,90].forEach(function(el){
+    var rad = el*Math.PI/180;
+    var rr = R_OUTER*0.92;
+    var s = makeLabelSprite(el+"°", "#8d96a6");
+    s.scale.set(0.85,0.21,1);
+    s.position.set(Math.cos(rad)*rr*0.985, Math.sin(rad)*rr + 0.18, 0.0);
+    elLabels.add(s);
+  });
+  scene.add(elLabels);
+
+  // physical distance scale: concentric rings on the ground, each labeled
+  // with the real-world range (km) its radius represents
+  var rangeRingGroup = new THREE.Group();
+  scene.add(rangeRingGroup);
+
+  function buildRangeRings(){
+    while (rangeRingGroup.children.length){
+      var c = rangeRingGroup.children.pop();
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) c.material.dispose();
+    }
+    var step = AXIS_MAX_KM > 30 ? 10 : 5;
+    var ticks = [];
+    for (var v=step; v<=AXIS_MAX_KM; v+=step) ticks.push(v);
+    var lineColor = css("--grid-line");
+    var labelColor = css("--text-muted") || "#8d96a6";
+    var labelAz = 225*Math.PI/180;
+    ticks.forEach(function(v){
+      var r = radiusForKm(v);
+      if (r <= R_MIN + 0.02) return;
+      var pts = [];
+      var segs = 96;
+      for (var i=0;i<=segs;i++){
+        var a = i/segs*Math.PI*2;
+        pts.push(new THREE.Vector3(Math.cos(a)*r, 0.015, Math.sin(a)*r));
+      }
+      var geo = new THREE.BufferGeometry().setFromPoints(pts);
+      var mat = new THREE.LineBasicMaterial({ color:lineColor, transparent:true, opacity:0.4 });
+      rangeRingGroup.add(new THREE.Line(geo, mat));
+
+      var lbl = makeLabelSprite(v+" km", labelColor);
+      lbl.scale.set(0.72, 0.18, 1);
+      lbl.position.set(Math.cos(labelAz)*r, 0.05, Math.sin(labelAz)*r);
+      rangeRingGroup.add(lbl);
+    });
+
+    // vertical distance scale: a ticked ruler standing beside the shape so
+    // straight-up/near-zenith reach can be read in km too, not just the
+    // ground rings. Fixed to its own 5km ceiling regardless of the horizontal
+    // AXIS_MAX_KM, since vertical reach is never remotely comparable in scale.
+    var vMaxKm = 5;
+    var vStep = 1;
+    var vTicks = [];
+    for (var vv=vStep; vv<=vMaxKm; vv+=vStep) vTicks.push(vv);
+    var vAz = 135*Math.PI/180;
+    var vAxisX = Math.cos(vAz)*R_MIN*1.4, vAxisZ = Math.sin(vAz)*R_MIN*1.4;
+    var topY = radiusForKm(vMaxKm);
+    var vLineGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(vAxisX, 0, vAxisZ), new THREE.Vector3(vAxisX, topY, vAxisZ)
+    ]);
+    rangeRingGroup.add(new THREE.Line(vLineGeo, new THREE.LineBasicMaterial({ color:lineColor, transparent:true, opacity:0.4 })));
+    vTicks.forEach(function(v){
+      var y = radiusForKm(v);
+      if (y <= R_MIN + 0.02) return;
+      // ticks project to one side only (not straddling the line) so the
+      // ruler doesn't read as a boom with elements - i.e. a Yagi silhouette
+      var tickGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(vAxisX, y, vAxisZ), new THREE.Vector3(vAxisX+0.16, y, vAxisZ)
+      ]);
+      rangeRingGroup.add(new THREE.Line(tickGeo, new THREE.LineBasicMaterial({ color:lineColor, transparent:true, opacity:0.4 })));
+      var vlbl = makeLabelSprite(v+" km", labelColor);
+      vlbl.scale.set(0.72, 0.18, 1);
+      vlbl.position.set(vAxisX-0.5, y, vAxisZ);
+      rangeRingGroup.add(vlbl);
+    });
+  }
+
+  // ---------------------------------------------------------------- pattern mesh
+  var elevArr = null, phiArr = null;   // degrees; elevArr: 0 = horizon .. 90 = zenith
+  var nT = 0, nP = 0;                    // nP excludes wrap duplicate
+  var positions, colors, displayGain;
+  var geometry = null, mesh = null, wireMesh = null;
+
+  function sphPoint(elevDeg, phiDeg, r){
+    var e = elevDeg*Math.PI/180, p = phiDeg*Math.PI/180;
+    var ce = Math.cos(e);
+    return [ r*ce*Math.cos(p), r*Math.sin(e), r*ce*Math.sin(p) ];
+  }
+
+  function buildGeometry(){
+    // terrain grids are all 91x180, but a polarization switch can bring in a
+    // dataset with a different theta resolution (e.g. a full -90..90 sweep
+    // instead of -90..0), so the mesh is fully rebuilt rather than resized
+    if (mesh) scene.remove(mesh);
+    if (wireMesh) scene.remove(wireMesh);
+    if (geometry) geometry.dispose();
+
+    nT = elevArr.length;
+    nP = phiArr.length;
+    var cols = nP + 1; // duplicate column to close the seam
+    var count = nT*cols;
+    positions = new Float32Array(count*3);
+    colors = new Float32Array(count*3);
+    var indices = [];
+
+    for (var ti=0; ti<nT; ti++){
+      for (var pi=0; pi<cols; pi++){
+        var idx = ti*cols+pi;
+        positions[idx*3] = 0; positions[idx*3+1] = 0; positions[idx*3+2] = 0;
+        colors[idx*3] = 0.2; colors[idx*3+1] = 0.2; colors[idx*3+2] = 0.2;
+      }
+    }
+    for (var t=0; t<nT-1; t++){
+      for (var p=0; p<cols-1; p++){
+        var a = t*cols+p, b = t*cols+p+1, c = (t+1)*cols+p, d = (t+1)*cols+p+1;
+        indices.push(a,c,b, b,c,d);
+      }
+    }
+
+    geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+
+    var mat = new THREE.MeshStandardMaterial({
+      vertexColors:true, side:THREE.DoubleSide, roughness:0.55, metalness:0.04,
+      flatShading:false
+    });
+    mesh = new THREE.Mesh(geometry, mat);
+    scene.add(mesh);
+
+    var wireMat = new THREE.MeshBasicMaterial({ color:0x111620, wireframe:true, transparent:true, opacity:0.16 });
+    wireMesh = new THREE.Mesh(geometry, wireMat);
+    wireMesh.visible = state.wire;
+    scene.add(wireMesh);
+  }
+
+  function updateGeometryFromGain(gainGrid, thresholdDbm){
+    var cols = nP+1;
+    for (var ti=0; ti<nT; ti++){
+      var el = elevArr[ti];
+      for (var pi=0; pi<cols; pi++){
+        var srcPi = pi % nP;
+        var g = gainGrid[ti][srcPi];
+        var r = radiusFor(g, thresholdDbm);
+        var pt = sphPoint(el, phiArr[srcPi], r);
+        var idx = ti*cols+pi;
+        positions[idx*3]=pt[0]; positions[idx*3+1]=pt[1]; positions[idx*3+2]=pt[2];
+        var col = colorFor(g, thresholdDbm);
+        colors[idx*3]=col[0]/255; colors[idx*3+1]=col[1]/255; colors[idx*3+2]=col[2]/255;
+      }
+    }
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+  }
+
+  // ---------------------------------------------------------------- second dome (measuredCoupling mode only)
+  // measuredCoupling renders a qualifying pair as two independent
+  // semi-transparent domes instead of one merged union mesh (see plan).
+  // Rather than refactoring buildGeometry()/updateGeometryFromGain()
+  // (the primary, module-level mesh/geometry/positions/colors) into a
+  // slot-parameterized design, this duplicates that same geometry-building
+  // logic into a fully separate "secondary slot" object - the primary path
+  // above is untouched, so union/single dome rendering stays byte-identical
+  // (explicit regression requirement).
+  var secondarySlot = null; // { geometry, mesh, wireMesh, positions, colors, nT, nP, elevArr, phiArr, shapeKey }
+
+  function teardownSecondaryDome(){
+    if (!secondarySlot) return;
+    if (secondarySlot.mesh) scene.remove(secondarySlot.mesh);
+    if (secondarySlot.wireMesh) scene.remove(secondarySlot.wireMesh);
+    if (secondarySlot.geometry) secondarySlot.geometry.dispose();
+    secondarySlot = null;
+  }
+
+  function buildSecondaryGeometry(elevArrV, phiArrV){
+    if (secondarySlot){
+      if (secondarySlot.mesh) scene.remove(secondarySlot.mesh);
+      if (secondarySlot.wireMesh) scene.remove(secondarySlot.wireMesh);
+      if (secondarySlot.geometry) secondarySlot.geometry.dispose();
+    }
+    var nTv = elevArrV.length, nPv = phiArrV.length;
+    var cols = nPv + 1;
+    var count = nTv*cols;
+    var pos = new Float32Array(count*3);
+    var col = new Float32Array(count*3);
+    var indices = [];
+    for (var ti=0; ti<nTv; ti++){
+      for (var pi=0; pi<cols; pi++){
+        var idx = ti*cols+pi;
+        pos[idx*3]=0; pos[idx*3+1]=0; pos[idx*3+2]=0;
+        col[idx*3]=0.2; col[idx*3+1]=0.2; col[idx*3+2]=0.2;
+      }
+    }
+    for (var t=0; t<nTv-1; t++){
+      for (var p=0; p<cols-1; p++){
+        var a=t*cols+p, b=t*cols+p+1, c=(t+1)*cols+p, d=(t+1)*cols+p+1;
+        indices.push(a,c,b, b,c,d);
+      }
+    }
+    var geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geom.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    geom.setIndex(indices);
+    geom.computeVertexNormals();
+
+    var mat = new THREE.MeshStandardMaterial({
+      vertexColors:true, side:THREE.DoubleSide, roughness:0.55, metalness:0.04,
+      flatShading:false, transparent:true, opacity: state.coupledOpacity
+    });
+    var m = new THREE.Mesh(geom, mat);
+    scene.add(m);
+
+    var wireMat = new THREE.MeshBasicMaterial({ color:0x111620, wireframe:true, transparent:true, opacity:0.16*state.coupledOpacity });
+    var wm = new THREE.Mesh(geom, wireMat);
+    wm.visible = state.wire;
+    scene.add(wm);
+
+    secondarySlot = {
+      geometry: geom, mesh: m, wireMesh: wm, positions: pos, colors: col,
+      nT: nTv, nP: nPv, elevArr: elevArrV, phiArr: phiArrV,
+      shapeKey: domeMeshShapeKey(nTv, nPv)
+    };
+  }
+
+  function updateSecondaryGeometryFromGain(gainGrid, thresholdDbm){
+    var s = secondarySlot;
+    var cols = s.nP+1;
+    for (var ti=0; ti<s.nT; ti++){
+      var el = s.elevArr[ti];
+      for (var pi=0; pi<cols; pi++){
+        var srcPi = pi % s.nP;
+        var g = gainGrid[ti][srcPi];
+        var r = radiusFor(g, thresholdDbm);
+        var pt = sphPoint(el, s.phiArr[srcPi], r);
+        var idx = ti*cols+pi;
+        s.positions[idx*3]=pt[0]; s.positions[idx*3+1]=pt[1]; s.positions[idx*3+2]=pt[2];
+        var c = colorFor(g, thresholdDbm);
+        s.colors[idx*3]=c[0]/255; s.colors[idx*3+1]=c[1]/255; s.colors[idx*3+2]=c[2]/255;
+      }
+    }
+    s.geometry.attributes.position.needsUpdate = true;
+    s.geometry.attributes.color.needsUpdate = true;
+  }
+
+  // combined-dome variant of updateGeometryFromGain: reads four per-cell
+  // grids (gain/eirp/freq/threshold) instead of one grid + one scalar
+  // threshold, since a mixed-model combined dome has no single global
+  // frequency/EIRP/threshold to fall back on (see rangeKmFromGain's
+  // explicit-args form).
+  function updateGeometryFromCombined(combined){
+    var cols = nP+1;
+    for (var ti=0; ti<nT; ti++){
+      var el = elevArr[ti];
+      for (var pi=0; pi<cols; pi++){
+        var srcPi = pi % nP;
+        var g = combined.gainGrid[ti][srcPi];
+        var eirp = combined.eirpGrid[ti][srcPi], freq = combined.freqGrid[ti][srcPi], thr = combined.threshGrid[ti][srcPi];
+        var r = radiusForKm(rangeKmFromGain(g, eirp, freq, thr));
+        var pt = sphPoint(el, phiArr[srcPi], r);
+        var idx = ti*cols+pi;
+        positions[idx*3]=pt[0]; positions[idx*3+1]=pt[1]; positions[idx*3+2]=pt[2];
+        var col = colorForKm(rangeKmFromGain(g, eirp, freq, thr));
+        colors[idx*3]=col[0]/255; colors[idx*3+1]=col[1]/255; colors[idx*3+2]=col[2]/255;
+      }
+    }
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+  }
+
+  // ---------------------------------------------------------------- multi-antenna combine (3D dome only; 2D plots stay per-instance native, see draw2D)
+
+  // finest-resolution enabled instance's own elevDeg/phiDeg - identity for a
+  // single enabled instance, so "combined" degenerates to exactly that
+  // instance's own grid with no resampling target to reconcile with
+  function getCanonicalGrid(){
+    var insts = enabledAntennas();
+    var best = null, bestCells = -1;
+    insts.forEach(function(inst){
+      var shape = instanceGridShape(inst);
+      var cells = shape.elevDeg.length * shape.phiDeg.length;
+      if (cells > bestCells){ bestCells = cells; best = shape; }
+    });
+    return best;
+  }
+
+  // nearest-neighbor resample of one instance's native grid onto the
+  // canonical elev/phi grid, folding heading rotation into the same pass
+  function resampleInstanceToCanonical(instance, canon){
+    var shape = instanceGridShape(instance);
+    var nativeElev = shape.elevDeg, nativePhi = shape.phiDeg;
+    var nativeGrid = instanceNativeGrid(instance);
+    var nE = nativeElev.length, nPn = nativePhi.length;
+    var elMin = nativeElev[0], elStep = nE>1 ? (nativeElev[nE-1]-elMin)/(nE-1) : 1;
+    var phiStep = 360/nPn;
+    var nTc = canon.elevDeg.length, nPc = canon.phiDeg.length;
+    var out = new Array(nTc);
+    for (var ti=0; ti<nTc; ti++){
+      var si = Math.max(0, Math.min(nE-1, Math.round((canon.elevDeg[ti]-elMin)/elStep)));
+      var row = new Array(nPc);
+      for (var pi=0; pi<nPc; pi++){
+        var localPhi = ((canon.phiDeg[pi] - instance.headingDeg) % 360 + 360) % 360;
+        var spi = Math.round(localPhi/phiStep) % nPn;
+        row[pi] = nativeGrid[si][spi];
+      }
+      out[ti] = row;
+    }
+    return out;
+  }
+
+  function buildStandaloneUnit(instance, canon){
+    var profile = TAG_PROFILES[instance.model] || TAG_PROFILES.plc1669;
+    return {
+      gainGrid: resampleInstanceToCanonical(instance, canon),
+      eirpDbm: profile.eirpDbm,
+      freqMhz: instanceFreqMhz(instance),
+      thresholdDbm: instanceThresholdDbm(instance),
+      profile: profile,
+      label: instance.model
+    };
+  }
+
+  // groups enabled instances into standalone units (one per instance) for
+  // the union combine path - coherent array-factor combination was removed
+  // (see MODEL_LABELS-adjacent history/memory: array-factor superposition
+  // can only reweight lobes already present in each isolated pattern, never
+  // invent a new one the way real mutual coupling does, so it didn't reflect
+  // physical reality for stacked antennas and was dropped in favor of the
+  // measured-coupling mode below).
+  function buildCombineUnits(canon){
+    var insts = enabledAntennas();
+    var units = [];
+    insts.forEach(function(inst){ units.push(buildStandaloneUnit(inst, canon)); });
+    return units;
+  }
+
+  // per canonical cell, picks the union-winning unit by comparing
+  // eirpDbm+gainDb-thresholdDbm (the distance-independent part of margin -
+  // ranking by this equals ranking margin at any real distance, since FSPL's
+  // -20log10(d) term is common to all units and cancels out). Always fully
+  // recomputed (not cached) since a noise-slider move can flip which unit's
+  // hardware-floor-vs-ambient threshold binds. Returns null if no antennas
+  // are enabled.
+  function computeCombinedResult(){
+    var canon = getCanonicalGrid();
+    if (!canon) return null;
+    var units = buildCombineUnits(canon);
+    if (!units.length) return null;
+    var nTc = canon.elevDeg.length, nPc = canon.phiDeg.length;
+    var gainGrid = new Array(nTc), eirpGrid = new Array(nTc), freqGrid = new Array(nTc), threshGrid = new Array(nTc);
+    for (var ti=0; ti<nTc; ti++){
+      gainGrid[ti]=new Array(nPc); eirpGrid[ti]=new Array(nPc); freqGrid[ti]=new Array(nPc); threshGrid[ti]=new Array(nPc);
+      for (var pi=0; pi<nPc; pi++){
+        var bestMargin = -Infinity, bu = units[0];
+        for (var ui=0; ui<units.length; ui++){
+          var u = units[ui];
+          var margin = u.eirpDbm + u.gainGrid[ti][pi] - u.thresholdDbm;
+          if (margin > bestMargin){ bestMargin = margin; bu = u; }
+        }
+        gainGrid[ti][pi] = bu.gainGrid[ti][pi];
+        eirpGrid[ti][pi] = bu.eirpDbm;
+        freqGrid[ti][pi] = bu.freqMhz;
+        threshGrid[ti][pi] = bu.thresholdDbm;
+      }
+    }
+    return { elevDeg: canon.elevDeg, phiDeg: canon.phiDeg, gainGrid: gainGrid, eirpGrid: eirpGrid, freqGrid: freqGrid, threshGrid: threshGrid, units: units };
+  }
+
+  function gridAllEqual(grid, nTc, nPc){
+    var v0 = grid[0][0];
+    for (var ti=0; ti<nTc; ti++) for (var pi=0; pi<nPc; pi++) if (grid[ti][pi] !== v0) return false;
+    return true;
+  }
+
+  // ---------------------------------------------------------------- stats
+  // shared by computeStats and the 2D plots below, so both agree on which
+  // elevation/azimuth row+column is "the" boresight cut for the current grid
+  function findPeak(gainGrid){
+    var best = -1e9, bTi=0, bPi=0;
+    for (var ti=0; ti<nT; ti++){
+      for (var pi=0; pi<nP; pi++){
+        if (gainGrid[ti][pi] > best){ best = gainGrid[ti][pi]; bTi = ti; bPi = pi; }
+      }
+    }
+    return { best:best, bTi:bTi, bPi:bPi };
+  }
+
+  function computeStats(gainGrid){
+    var peak = findPeak(gainGrid);
+    var best = peak.best, bTi = peak.bTi, bPi = peak.bPi;
+    var takeoff = elevArr[bTi];
+    var backPi = (bPi + Math.round(nP/2)) % nP;
+    var backGain = gainGrid[bTi][backPi];
+
+    // azimuth beamwidth (-3dB), walking outward from the peak until the
+    // pattern first drops below half-power on each side (handles sidelobes)
+    var row = gainGrid[bTi];
+    var half = best - 3;
+    var phiStep = 360/nP;
+    var left = 0, right = 0;
+    while (left < nP/2 && row[(bPi - left - 1 + nP) % nP] >= half) left++;
+    while (right < nP/2 && row[(bPi + right + 1) % nP] >= half) right++;
+    var bw = (left+right) * phiStep;
+
+    return {
+      peak: best,
+      range: rangeKmFromGain(best, currentThresholdDbm()),
+      takeoff: takeoff,
+      az: phiArr[bPi],
+      fb: best - backGain,
+      bw: bw,
+      thresholdDbm: currentThresholdDbm()
+    };
+  }
+
+  // combined-dome variant of computeStats: same peak/beamwidth/front-back
+  // logic, but reads the per-cell eirp/freq/threshold grids at the winning
+  // cell instead of the (nonexistent, for a mixed-model union) global
+  // TAG_EIRP_DBM/FREQ_MHZ/currentThresholdDbm(). Assumes elevArr/phiArr/nT/nP
+  // already mirror combined's own shape (set by refreshDome() before this
+  // is called), exactly like computeStats() assumes for the single-grid case.
+  function computeStatsCombined(combined){
+    var peak = findPeak(combined.gainGrid);
+    var best = peak.best, bTi = peak.bTi, bPi = peak.bPi;
+    var takeoff = elevArr[bTi];
+    var backPi = (bPi + Math.round(nP/2)) % nP;
+    var backGain = combined.gainGrid[bTi][backPi];
+
+    var row = combined.gainGrid[bTi];
+    var half = best - 3;
+    var phiStep = 360/nP;
+    var left = 0, right = 0;
+    while (left < nP/2 && row[(bPi - left - 1 + nP) % nP] >= half) left++;
+    while (right < nP/2 && row[(bPi + right + 1) % nP] >= half) right++;
+    var bw = (left+right) * phiStep;
+
+    var thresholdDbm = combined.threshGrid[bTi][bPi];
+    return {
+      peak: best,
+      range: rangeKmFromGain(best, combined.eirpGrid[bTi][bPi], combined.freqGrid[bTi][bPi], thresholdDbm),
+      takeoff: takeoff,
+      az: phiArr[bPi],
+      fb: best - backGain,
+      bw: bw,
+      thresholdDbm: thresholdDbm
+    };
+  }
+
+  // ---------------------------------------------------------------- 2D view (radiation-pattern cuts + signal field)
+  // These plots are only drawn from draw2D(), which every state-changing
+  // handler below calls behind an `if (state.view==="2d")` gate - so none of
+  // this recomputes while the 3D dome is the active view.
+  var FIELD_MAX_RANGE_KM = AXIS_MAX_KM;  // 20km, matches the 3D dome's ground rings
+  var FIELD_MAX_ALT_KM = 5;              // matches the 3D view's vertical ruler ceiling
+
+  function setupCanvas(canvas){
+    var dpr = Math.min(devicePixelRatio || 1, 2);
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, Math.round(rect.width));
+    var h = Math.max(1, Math.round(rect.height));
+    if (canvas.width !== w*dpr || canvas.height !== h*dpr){
+      canvas.width = w*dpr;
+      canvas.height = h*dpr;
+    }
+    var ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx:ctx, w:w, h:h };
+  }
+
+  // azimuth (H-plane) cut at the peak-gain elevation row, classic polar plot,
+  // 0dB (peak) at the outer ring, phi=0 boresight at top, clockwise - matches
+  // the 3D dome's own "0° BORESIGHT" convention
+  function drawAzimuthPlot(gainGrid, peak, canvasId, subId){
+    var c = setupCanvas(document.getElementById(canvasId || "azCanvas"));
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0, 0, w, h);
+    var cx = w/2, cy = h/2, R = Math.max(10, Math.min(w,h)/2 - 22);
+    var row = gainGrid[peak.bTi];
+    document.getElementById(subId || "azPlotSub").textContent = "el " + elevArr[peak.bTi].toFixed(0) + "° cut";
+
+    var textColor = css("--text-muted") || "#8d96a6";
+    var lineColor = css("--grid-line") || "#9aa5b1";
+    var accent = css("--accent") || "#a8481a";
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.lineWidth = 1;
+
+    [0,-10,-20,-30].forEach(function(db){
+      var t = Math.max(0, Math.min(1, (db+30)/30));
+      var r = R*t;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = db===0 ? 0.55 : 0.25;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = textColor;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(db===0 ? "0dB" : String(db), cx+3, cy-r-2);
+    });
+
+    for (var d=0; d<360; d+=30){
+      var rad = (d-90)*Math.PI/180;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx+Math.cos(rad)*R, cy+Math.sin(rad)*R);
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = 0.22;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      var lx = cx+Math.cos(rad)*(R+12), ly = cy+Math.sin(rad)*(R+12);
+      ctx.fillStyle = textColor;
+      ctx.textAlign = Math.abs(Math.cos(rad))<0.2 ? "center" : (Math.cos(rad)>0 ? "left":"right");
+      ctx.textBaseline = Math.abs(Math.sin(rad))<0.2 ? "middle" : (Math.sin(rad)>0 ? "top":"bottom");
+      ctx.fillText(d+"°", lx, ly);
+    }
+
+    ctx.beginPath();
+    for (var pi=0; pi<=nP; pi++){
+      var srcPi = pi % nP;
+      var g = row[srcPi];
+      var t2 = Math.max(0, Math.min(1, (g-peak.best+30)/30));
+      var r2 = R*t2;
+      var rad2 = (phiArr[srcPi]-90)*Math.PI/180;
+      var x = cx+Math.cos(rad2)*r2, y = cy+Math.sin(rad2)*r2;
+      if (pi===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.75;
+    ctx.stroke();
+  }
+
+  // elevation (V-plane) cut along the peak azimuth column - cartesian, not
+  // polar, since the available data only spans elevArr[0]..elevArr[nT-1]
+  // (typically 0-90deg) and a cartesian plot shows the height-dependent
+  // two-ray lobing structure far more clearly than a partial polar wedge
+  function drawElevationPlot(gainGrid, peak, canvasId, subId){
+    var c = setupCanvas(document.getElementById(canvasId || "elCanvas"));
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0, 0, w, h);
+    var padL=34, padR=10, padT=10, padB=20;
+    var plotW = w-padL-padR, plotH = h-padT-padB;
+    if (plotW<=0 || plotH<=0) return;
+    var col = peak.bPi;
+    document.getElementById(subId || "elPlotSub").textContent = "az " + phiArr[col].toFixed(0) + "° cut";
+
+    var lo = peak.best-40, hi = peak.best+3;
+    var elMin = elevArr[0], elMax = elevArr[nT-1];
+    function xFor(el){ return padL + (el-elMin)/(elMax-elMin)*plotW; }
+    function yFor(db){ return padT + (1-(db-lo)/(hi-lo))*plotH; }
+
+    var textColor = css("--text-muted") || "#8d96a6";
+    var lineColor = css("--grid-line") || "#9aa5b1";
+    var accent = css("--accent") || "#a8481a";
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+
+    ctx.strokeStyle = lineColor;
+    ctx.fillStyle = textColor;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (var db=Math.ceil(lo/10)*10; db<=hi; db+=10){
+      var y = yFor(db);
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillText(db.toFixed(0), padL-6, y);
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (var el=Math.ceil(elMin/30)*30; el<=elMax; el+=30){
+      var x = xFor(el);
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,h-padB); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillText(el.toFixed(0)+"°", x, h-padB+4);
+    }
+
+    ctx.beginPath();
+    for (var ti=0; ti<nT; ti++){
+      var xx = xFor(elevArr[ti]), yy = yFor(Math.max(lo, gainGrid[ti][col]));
+      if (ti===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
+    }
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.75;
+    ctx.stroke();
+  }
+
+  // furthest range (km) at which a tag at the given altitude/column is still
+  // detectable - scans range outward and keeps the LAST point that clears
+  // the threshold, since two-ray lobes/nulls can make it clear/fail/clear
+  // again along the way; returns null if not detectable at any range.
+  function maxDetectableRangeKm(gainGrid, col, altKm, thresholdDbm, steps){
+    var elMin = elevArr[0], elMax = elevArr[nT-1], elStep = (elMax-elMin)/(nT-1);
+    var best = null;
+    for (var i=1; i<=steps; i++){
+      var rangeKm = FIELD_MAX_RANGE_KM * (i/steps);
+      var elevDeg = Math.atan2(altKm, Math.max(rangeKm,1e-6))*180/Math.PI;
+      var ti = Math.max(0, Math.min(nT-1, Math.round((elevDeg-elMin)/elStep)));
+      var gainDb = gainGrid[ti][col];
+      var slantKm = Math.max(Math.hypot(rangeKm, altKm), 1e-3);
+      var rxDbm = TAG_EIRP_DBM + gainDb - fsplDb(slantKm, FREQ_MHZ);
+      if (rxDbm >= thresholdDbm) best = rangeKm;
+    }
+    return best;
+  }
+
+  // max detectable range vs. tag altitude - the direct counterpart to
+  // nanotag_range.html's "Max range vs. tag altitude" chart, using the same
+  // link budget and threshold as the field plot below.
+  function drawRangeAltPlot(gainGrid, peak, thresholdDbm, canvasId){
+    var c = setupCanvas(document.getElementById(canvasId || "rangeAltCanvas"));
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0, 0, w, h);
+    var padL=42, padR=14, padT=10, padB=20;
+    var plotW = w-padL-padR, plotH = h-padT-padB;
+    if (plotW<=0 || plotH<=0) return;
+
+    var col = peak.bPi;
+    var xFor = function(rangeKm){ return padL + (rangeKm/FIELD_MAX_RANGE_KM)*plotW; };
+    var yFor = function(altKm){ return padT + (1-altKm/FIELD_MAX_ALT_KM)*plotH; };
+
+    var gridColor = css("--grid-line") || "#9aa5b1";
+    ctx.strokeStyle = gridColor;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1;
+    var rangeStep0 = FIELD_MAX_RANGE_KM <= 20 ? 5 : 10;
+    for (var rv0=0; rv0<=FIELD_MAX_RANGE_KM; rv0+=rangeStep0){
+      var gx = xFor(rv0);
+      ctx.beginPath(); ctx.moveTo(gx, padT); ctx.lineTo(gx, padT+plotH); ctx.stroke();
+    }
+    for (var av0=0; av0<=FIELD_MAX_ALT_KM; av0++){
+      var gy = yFor(av0);
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL+plotW, gy); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    var altSteps = Math.max(40, Math.min(200, Math.round(plotH)));
+    var accent = css("--accent") || "#a8481a";
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.75;
+    ctx.beginPath();
+    var started = false;
+    for (var i=0; i<=altSteps; i++){
+      var altKm = FIELD_MAX_ALT_KM * (i/altSteps);
+      var rangeKm = maxDetectableRangeKm(gainGrid, col, altKm, thresholdDbm, 200);
+      if (rangeKm === null){ started = false; continue; }
+      var px = xFor(rangeKm), py = yFor(altKm);
+      if (!started){ ctx.moveTo(px, py); started = true; }
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    var textColor = css("--text-muted") || "#8d96a6";
+    ctx.fillStyle = textColor;
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (var rv=0; rv<=FIELD_MAX_RANGE_KM; rv+=rangeStep0){
+      ctx.fillText(String(rv), xFor(rv), padT+plotH+4);
+    }
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (var av=0; av<=FIELD_MAX_ALT_KM; av++){
+      ctx.fillText(String(av*1000), padL-6, yFor(av));
+    }
+  }
+
+  // range x altitude "signal strength field": for every (range, altitude)
+  // pixel along the peak-azimuth vertical slice, convert to an elevation
+  // angle psi=atan2(altitude,range), sample the same live gain grid used by
+  // the 3D dome and elevation plot at that angle, then run the actual link
+  // budget over the true slant distance - this surfaces the two-ray
+  // interference lobes/nulls as a function of BOTH range and altitude, which
+  // the 3D dome (one boundary range per direction) can't show.
+  function drawFieldPlot(gainGrid, peak, thresholdDbm, canvasId){
+    var c = setupCanvas(document.getElementById(canvasId || "fieldCanvas"));
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0, 0, w, h);
+    var padL=42, padR=14, padT=10, padB=20;
+    var plotW = w-padL-padR, plotH = h-padT-padB;
+    if (plotW<=0 || plotH<=0) return;
+
+    var col = peak.bPi;
+    var elMin = elevArr[0], elMax = elevArr[nT-1], elStep = (elMax-elMin)/(nT-1);
+    var cols = Math.max(20, Math.min(160, Math.round(plotW/4)));
+    var rows = Math.max(20, Math.min(120, Math.round(plotH/4)));
+    var cellW = plotW/cols, cellH = plotH/rows;
+
+    var marginGrid = new Array(rows);
+    for (var ry=0; ry<rows; ry++){
+      var altKm = FIELD_MAX_ALT_KM * (1 - (ry+0.5)/rows);
+      var mrow = new Array(cols);
+      for (var rx=0; rx<cols; rx++){
+        var rangeKm = FIELD_MAX_RANGE_KM * ((rx+0.5)/cols);
+        var elevDeg = Math.atan2(altKm, Math.max(rangeKm,1e-6))*180/Math.PI;
+        var ti = Math.max(0, Math.min(nT-1, Math.round((elevDeg-elMin)/elStep)));
+        var gainDb = gainGrid[ti][col];
+        var slantKm = Math.max(Math.hypot(rangeKm, altKm), 1e-3);
+        var rxDbm = TAG_EIRP_DBM + gainDb - fsplDb(slantKm, FREQ_MHZ);
+        mrow[rx] = rxDbm - thresholdDbm;
+        var col3 = fieldColorFor(rxDbm);
+        ctx.fillStyle = "rgb("+(col3[0]|0)+","+(col3[1]|0)+","+(col3[2]|0)+")";
+        ctx.fillRect(padL+rx*cellW, padT+ry*cellH, cellW+0.6, cellH+0.6);
+      }
+      marginGrid[ry] = mrow;
+    }
+
+    // detection boundary: per altitude row, the single furthest (max-range)
+    // column that still clears the threshold - two-ray lobes/nulls can make
+    // the margin cross 0dB more than once along a row, but only the
+    // outermost crossing is "max detectable range at this altitude", so
+    // tracing row-by-row (rather than hunting every crossing in every
+    // column) always yields one clean point per row, connected into a
+    // single continuous line
+    var boundaryPts = [];
+    for (var ry3=0; ry3<rows; ry3++){
+      var mrow3 = marginGrid[ry3];
+      var lastOk = -1;
+      for (var rx3=0; rx3<cols; rx3++){ if (mrow3[rx3] >= 0) lastOk = rx3; }
+      if (lastOk < 0) continue;
+      var fracX = lastOk;
+      if (lastOk < cols-1 && (mrow3[lastOk+1] < 0)){
+        var a3 = mrow3[lastOk], b3 = mrow3[lastOk+1];
+        fracX = lastOk + a3/(a3-b3);
+      }
+      boundaryPts.push([padL + (fracX+0.5)*cellW, padT + (ry3+0.5)*cellH]);
+    }
+    // the field's own color scale runs dark-teal -> warm tan/orange, so the
+    // themed --accent (also an orange) used elsewhere disappears into the
+    // warm end of that gradient - trace this line pale-on-dark-halo instead,
+    // like a map contour, so it stays visible against the whole palette
+    function strokeBoundary(strokeStyle, lineWidth){
+      if (!boundaryPts.length) return;
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lineWidth;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      boundaryPts.forEach(function(p, i){
+        if (i===0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.stroke();
+    }
+    ctx.setLineDash([3,3]);
+    strokeBoundary("rgba(10,12,16,0.55)", 3.5);
+    strokeBoundary("#f7f3ea", 1.5);
+    ctx.setLineDash([]);
+
+    var textColor = css("--text-muted") || "#8d96a6";
+    ctx.fillStyle = textColor;
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    var rangeStep = FIELD_MAX_RANGE_KM <= 20 ? 5 : 10;
+    for (var rv=0; rv<=FIELD_MAX_RANGE_KM; rv+=rangeStep){
+      var xt = padL + (rv/FIELD_MAX_RANGE_KM)*plotW;
+      ctx.fillText(String(rv), xt, padT+plotH+4);
+    }
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (var av=0; av<=FIELD_MAX_ALT_KM; av++){
+      var yt = padT + (1-av/FIELD_MAX_ALT_KM)*plotH;
+      ctx.fillText(String(av*1000), padL-6, yt);
+    }
+  }
+
+  // 2D plots stay per-antenna and independent - never combined/resampled
+  // (see the plan's rationale: no canonical-grid resampling is needed for
+  // 2D at all). draw2D() loops over enabled instances and calls the same
+  // draw*Plot functions used since day one, once per instance, each fed
+  // that instance's own native grid/threshold via a namespaced canvas id.
+  var view2dEl = document.getElementById("view2d");
+  var view2dEmptyEl = document.getElementById("view2dEmpty");
+
+  function buildAntennaPlotSection(inst){
+    var section = document.createElement("div");
+    section.className = "antenna-section";
+    section.dataset.antennaId = String(inst.id);
+    var head = document.createElement("div");
+    head.className = "antenna-section-head";
+    head.id = "antHead-" + inst.id;
+    section.appendChild(head);
+    var plots = document.createElement("div");
+    plots.className = "antenna-section-plots";
+
+    function plotPanel(wide, ariaLabel, titleHtml, subId, canvasId, extraHtml){
+      var sec = document.createElement("section");
+      sec.className = "panel plot-panel" + (wide ? " plot-panel-wide" : "");
+      sec.setAttribute("aria-label", ariaLabel);
+      sec.innerHTML =
+        '<div class="panel-title">'+titleHtml+'<span class="plot-sub" id="'+subId+'"></span></div>' +
+        '<div class="plot-body"><canvas id="'+canvasId+'"></canvas></div>' +
+        (extraHtml || "");
+      return sec;
+    }
+    var suf = "-" + inst.id;
+    plots.appendChild(plotPanel(false, "Azimuth pattern", "Azimuth pattern (H-plane)", "azPlotSub"+suf, "azCanvas"+suf));
+    plots.appendChild(plotPanel(false, "Elevation pattern", "Elevation pattern (V-plane)", "elPlotSub"+suf, "elCanvas"+suf));
+    plots.appendChild(plotPanel(true, "Max range versus tag altitude", "Max range vs. tag altitude", "rangeAltPlotSub"+suf, "rangeAltCanvas"+suf));
+    plots.appendChild(plotPanel(true, "Signal strength field, range versus altitude", "Signal strength field (range &times; altitude)", "fieldPlotSub"+suf, "fieldCanvas"+suf,
+      '<div class="field-colorbar"><div class="field-colorbar-track"></div><div class="field-colorbar-ticks">'+
+      '<span style="left:0%">&minus;140</span><span style="left:28.6%"><b>&minus;120</b>quiet</span>'+
+      '<span style="left:50%"><b>&minus;105</b>typical</span><span style="left:64.3%"><b>&minus;95</b>noisy</span>'+
+      '<span style="left:100%">&minus;70</span></div></div>'));
+    section.appendChild(plots);
+    return section;
+  }
+
+  function draw2D(){
+    if (!allModels) return;
+    var insts = enabledAntennas();
+    var wantIds = insts.map(function(i){ return String(i.id); });
+    var haveEls = Array.prototype.slice.call(view2dEl.querySelectorAll(".antenna-section"));
+    var haveIds = haveEls.map(function(el){ return el.dataset.antennaId; });
+    var same = wantIds.length===haveIds.length && wantIds.every(function(id,i){ return id===haveIds[i]; });
+    if (!same){
+      haveEls.forEach(function(el){ view2dEl.removeChild(el); });
+      insts.forEach(function(inst){ view2dEl.appendChild(buildAntennaPlotSection(inst)); });
+    }
+    if (view2dEmptyEl) view2dEmptyEl.hidden = insts.length > 0;
+
+    insts.forEach(function(inst){
+      applyInstanceGlobals(inst);
+      var gainGrid = instanceNativeGrid(inst);
+      var peak = findPeak(gainGrid);
+      var thresholdDbm = instanceThresholdDbm(inst);
+      var suf = "-" + inst.id;
+      var head = document.getElementById("antHead-"+inst.id);
+      if (head){
+        head.innerHTML = "<b>" + ((MODEL_META[inst.model]&&MODEL_META[inst.model].label) || inst.model) + "</b> &middot; " +
+          (POL_META_LABEL[inst.polarization]||inst.polarization) + " &middot; " + inst.heightM.toFixed(1) + "m AGL &middot; " + inst.headingDeg + "&deg;" +
+          (inst.enabled ? "" : " &middot; disabled");
+      }
+      var thresholdLabel = "boundary @ " + Math.round(thresholdDbm) + " dBm";
+      var rangeAltSub = document.getElementById("rangeAltPlotSub"+suf);
+      var fieldSub = document.getElementById("fieldPlotSub"+suf);
+      if (rangeAltSub) rangeAltSub.textContent = thresholdLabel;
+      if (fieldSub) fieldSub.textContent = thresholdLabel + " (dashed)";
+      drawAzimuthPlot(gainGrid, peak, "azCanvas"+suf, "azPlotSub"+suf);
+      drawElevationPlot(gainGrid, peak, "elCanvas"+suf, "elPlotSub"+suf);
+      drawRangeAltPlot(gainGrid, peak, thresholdDbm, "rangeAltCanvas"+suf);
+      drawFieldPlot(gainGrid, peak, thresholdDbm, "fieldCanvas"+suf);
+    });
+
+    // draw2D() repurposes the module-level elevArr/phiArr/nT/nP/TAG_* globals
+    // per instance (see applyInstanceGlobals) while it runs - refreshDome()
+    // puts them back to whatever the 3D dome/stats currently need. Cheap
+    // enough not to bother trying to "restore" partial state instead.
+    refreshDome();
+  }
+
+  var glHost2 = document.getElementById("view2d");
+  var legendPanel = document.getElementById("legendPanel");
+  var hintBar = document.getElementById("hintBar");
+  var viewBtns = { "3d": document.getElementById("view3dBtn"), "2d": document.getElementById("view2dBtn") };
+  function selectView(v){
+    if (state.view === v) return;
+    state.view = v;
+    viewBtns["3d"].setAttribute("aria-pressed", v==="3d" ? "true":"false");
+    viewBtns["2d"].setAttribute("aria-pressed", v==="2d" ? "true":"false");
+    glHost.hidden = v !== "3d";
+    legendPanel.hidden = v !== "3d";
+    hintBar.hidden = v !== "3d";
+    glHost2.hidden = v !== "2d";
+    tooltip.hidden = true;
+    if (v === "2d") draw2D();
+  }
+  viewBtns["3d"].addEventListener("click", function(){ selectView("3d"); });
+  viewBtns["2d"].addEventListener("click", function(){ selectView("2d"); });
+
+  // ---------------------------------------------------------------- UI wiring
+  var terrainGrid = document.getElementById("terrainGrid");
+  function buildTerrainButtons(){
+    ENV_ORDER.forEach(function(key){
+      var meta = ENV_META[key];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "terrain-btn";
+      btn.setAttribute("role","tab");
+      btn.setAttribute("aria-pressed", key===state.env ? "true":"false");
+      btn.innerHTML = '<span class="swatch" style="background:'+meta.colorHex+'"></span><span class="name">'+meta.label+'</span>';
+      btn.addEventListener("click", function(){ selectEnv(key); });
+      terrainGrid.appendChild(btn);
+    });
+  }
+
+  var threshBtns = {
+    min: document.getElementById("threshMinBtn"),
+    p50: document.getElementById("threshP50Btn"),
+    p95: document.getElementById("threshP95Btn")
+  };
+  function selectThreshold(key){
+    if (state.threshold===key) return;
+    state.threshold = key;
+    Object.keys(threshBtns).forEach(function(k){
+      threshBtns[k].setAttribute("aria-pressed", k===key ? "true":"false");
+    });
+    if (!allModels) return;
+    refreshDome();
+    if (state.view === "2d") draw2D();
+  }
+  threshBtns.min.addEventListener("click", function(){ selectThreshold("min"); });
+  threshBtns.p50.addEventListener("click", function(){ selectThreshold("p50"); });
+  threshBtns.p95.addEventListener("click", function(){ selectThreshold("p95"); });
+
+  var noiseSlider = document.getElementById("noiseSlider");
+  var noiseValueEl = document.getElementById("noiseValue");
+  function updateNoiseValueDisplay(){
+    noiseValueEl.textContent = "−" + Math.abs(state.noise) + " dBm";
+  }
+  updateNoiseValueDisplay();
+  noiseSlider.addEventListener("input", function(){
+    state.noise = parseInt(noiseSlider.value, 10);
+    updateNoiseValueDisplay();
+    if (!allModels) return;
+    refreshDome();
+    if (state.view === "2d") draw2D();
+  });
+
+  // instHeightSlider/instHeadingSlider/instMountBtns/instEnabledToggle/
+  // instModelSelect/instPolBtns (below, in the Antennas-panel wiring block)
+  // all edit the *active* antenna instance and share this same tail: instant
+  // recompute of the dome (whichever mode is active) plus the 2D plot column.
+  function afterInstanceEdit(){
+    if (!allModels) return;
+    // height/heading edits don't change measuredCoupling ELIGIBILITY (any
+    // spacing/heading snaps to a library sample - see
+    // refreshCombineAvailability's comment) but they do change which sample
+    // it snaps to, so the readout is refreshed on every edit, not just
+    // add/remove/enable/model/pol changes.
+    updateMeasuredCouplingNote();
+    refreshLiveCouplingStatus();
+    refreshDome();
+    if (state.view === "2d") draw2D();
+    renderAntennaChips();
+    drawTower();
+  }
+
+  var wireToggle = document.getElementById("wireToggle");
+  wireToggle.addEventListener("change", function(){
+    state.wire = wireToggle.checked;
+    if (wireMesh) wireMesh.visible = state.wire;
+  });
+
+  var rotateToggle = document.getElementById("rotateToggle");
+  rotateToggle.addEventListener("change", function(){
+    state.rotate = rotateToggle.checked;
+    controls.autoRotate = state.rotate;
+  });
+
+  function refreshLegend(){
+    var ticksEl = document.getElementById("legendTicks");
+    ticksEl.innerHTML = "";
+    var vals = [AXIS_MAX_KM, Math.round(AXIS_MAX_KM/2), 0];
+    vals.forEach(function(v){
+      var d = document.createElement("div");
+      d.textContent = v;
+      ticksEl.appendChild(d);
+    });
+  }
+
+  function fmtDb(v){ return (v>0?"+":"−") + Math.abs(v).toFixed(1); }
+  function fmtKm(v){ return (v<10 ? v.toFixed(1) : Math.round(v)) + " km"; }
+
+  function refreshStatsDisplay(stats){
+    document.getElementById("statRange").innerHTML = fmtKm(stats.range);
+    document.getElementById("statPeak").innerHTML = fmtDb(stats.peak) + " <small>dBi</small>";
+    document.getElementById("statTakeoff").innerHTML = stats.takeoff.toFixed(0) + "&deg; <small>el, az " + stats.az.toFixed(0) + "&deg;</small>";
+    document.getElementById("statFB").innerHTML = stats.fb.toFixed(1) + " <small>dB</small>";
+    document.getElementById("statBW").innerHTML = stats.bw.toFixed(0) + "&deg; <small>&minus;3dB</small>";
+    var thr = stats.thresholdDbm != null ? stats.thresholdDbm : currentThresholdDbm();
+    document.getElementById("statThresh").innerHTML = fmtDb(thr) + " <small>dBm</small>";
+  }
+
+  function clearStatsDisplay(){
+    ["statRange","statPeak","statTakeoff","statFB","statBW","statThresh"].forEach(function(id){
+      document.getElementById(id).innerHTML = "&mdash;";
+    });
+  }
+
+  function selectEnv(key){
+    if (!allModels || key===state.env) return;
+    Array.prototype.forEach.call(terrainGrid.children, function(b,i){
+      b.setAttribute("aria-pressed", ENV_ORDER[i]===key ? "true":"false");
+    });
+    state.env = key;
+    document.getElementById("groundNote").innerHTML = ENV_META[key].note;
+    groundMat.color.set(ENV_META[key].colorHex);
+
+    // terrain change is the one thing that morphs (matching today's
+    // single-antenna behavior exactly) - every other control below updates
+    // the dome instantly instead
+    refreshDome(true);
+    if (state.view === "2d") draw2D();
+    renderAntennaChips();
+    updateInstWarningNote();
+  }
+
+  // ---------------------------------------------------------------- morph animation
+  // morphThresholdDbm is captured once when the morph starts (terrain change
+  // is the only thing that morphs; threshold/noise never change mid-morph in
+  // practice) rather than re-read via currentThresholdDbm() every frame, so
+  // this keeps working correctly for the "single" dome-mode path (whose
+  // TAG_PROFILE/state.threshold-based threshold currentThresholdDbm() would
+  // still compute) as well as the combined-uniform path (which has no
+  // single global threshold to read - see refreshDome()).
+  var morphing = false, morphStart = 0, morphDur = 650, fromGain = null, toGain = null, morphThresholdDbm = 0;
+  function startMorph(target, thresholdDbm){
+    fromGain = displayGain ? cloneGrid(displayGain) : target;
+    toGain = target;
+    morphThresholdDbm = (thresholdDbm != null) ? thresholdDbm : currentThresholdDbm();
+    morphStart = performance.now();
+    morphing = true;
+  }
+  function easeInOut(t){ return t<0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function stepMorph(now){
+    if (!morphing) return;
+    var t = Math.min(1, (now-morphStart)/morphDur);
+    var e = easeInOut(t);
+    if (!displayGain) displayGain = [];
+    for (var ti=0; ti<nT; ti++){
+      if (!displayGain[ti]) displayGain[ti] = new Array(nP);
+      for (var pi=0; pi<nP; pi++){
+        displayGain[ti][pi] = fromGain[ti][pi] + (toGain[ti][pi]-fromGain[ti][pi])*e;
+      }
+    }
+    updateGeometryFromGain(displayGain, morphThresholdDbm);
+    if (t>=1){
+      morphing = false;
+      geometry.computeVertexNormals();
+    }
+  }
+
+  // ---------------------------------------------------------------- dome orchestration (single vs. combined)
+  // sets the module-level "currently displayed shape" globals (elevArr/
+  // phiArr/nT/nP/TAG_PROFILE/TAG_EIRP_DBM/FREQ_MHZ/SNR_DB) from one antenna
+  // instance - used both by the "single" dome-mode path below and by
+  // draw2D()'s per-instance loop (each 2D section is drawn against its own
+  // instance's globals, then refreshDome() restores whatever the 3D view
+  // needs when the 2D pass is done)
+  function applyInstanceGlobals(inst){
+    var shape = instanceGridShape(inst);
+    elevArr = shape.elevDeg; phiArr = shape.phiDeg;
+    nT = elevArr.length; nP = phiArr.length;
+    TAG_PROFILE = TAG_PROFILES[inst.model] || TAG_PROFILES.plc1669;
+    TAG_EIRP_DBM = TAG_PROFILE.eirpDbm;
+    FREQ_MHZ = shape.freqMhz;
+    SNR_DB = TAG_PROFILE.snrDb;
+  }
+
+  function domeMeshShapeKey(nTv, nPv){ return nTv+"x"+nPv; }
+  var lastMeshShapeKey = null;
+
+  function showNoAntennasEnabled(){
+    if (mesh) mesh.visible = false;
+    if (wireMesh) wireMesh.visible = false;
+    morphing = false;
+    lastMeshShapeKey = null;
+    clearStatsDisplay();
+    document.getElementById("groundNote").innerHTML = "No antennas enabled.";
+  }
+
+  // rebuilds/updates whichever dome is currently shown - the single active
+  // instance's own native pattern (state.domeMode==="single") or the
+  // union combination of every enabled instance
+  // (state.domeMode==="combined", the default). `morph` requests the
+  // existing tween (only ever used for a terrain change, matching today's
+  // single-antenna behavior exactly) rather than an instant jump; it's
+  // silently ignored whenever the mesh shape changed and a hard rebuild is
+  // required instead (add/remove/enable-toggle, or a model/polarization
+  // switch that changes grid resolution).
+  function refreshDome(morph){
+    if (!allModels) return;
+    if (state.domeMode === "single"){
+      teardownSecondaryDome();
+      var inst = activeAntenna();
+      if (!inst){ showNoAntennasEnabled(); return; }
+      applyInstanceGlobals(inst);
+      var grid = instanceNativeGrid(inst);
+      var thresholdDbm = instanceThresholdDbm(inst);
+      var shapeKey = domeMeshShapeKey(nT, nP);
+      if (mesh) mesh.visible = true;
+      if (wireMesh) wireMesh.visible = state.wire;
+      if (shapeKey !== lastMeshShapeKey){
+        buildGeometry();
+        displayGain = cloneGrid(grid);
+        updateGeometryFromGain(displayGain, thresholdDbm);
+        geometry.computeVertexNormals();
+        morphing = false;
+      } else if (morph){
+        startMorph(grid, thresholdDbm);
+      } else {
+        morphing = false;
+        displayGain = cloneGrid(grid);
+        updateGeometryFromGain(displayGain, thresholdDbm);
+      }
+      lastMeshShapeKey = shapeKey;
+      refreshStatsDisplay(computeStats(grid));
+      return;
+    }
+
+    // measuredCoupling + "combined" dome mode: render the qualifying pair as
+    // two separate semi-transparent domes (per the plan) instead of the
+    // usual merged union mesh - the primary/active instance's dome
+    // is fully opaque and interactive (tooltip/raycast), the other's opacity
+    // is state.coupledOpacity. Both instances' own instanceNativeGrid()
+    // already carries the coupling correction (see that function), so this
+    // branch is otherwise just "two independent single-dome renders."
+    if (state.combineMode === "measuredCoupling"){
+      var pairInfo = getCoupledPairInfo();
+      if (pairInfo){
+        var loInst = antennaById(pairInfo.loId), hiInst = antennaById(pairInfo.hiId);
+        var active = activeAntenna();
+        var primaryInst = (active && (active.id===pairInfo.loId || active.id===pairInfo.hiId)) ? active : loInst;
+        var otherInst = (primaryInst.id === loInst.id) ? hiInst : loInst;
+
+        applyInstanceGlobals(primaryInst);
+        // resampleInstanceToCanonical folds instance.headingDeg into its
+        // sampling (see the combined union path below); passing
+        // each instance's own native shape as the "canonical" grid rotates
+        // its already coupling-corrected pattern onto its own phi axis by
+        // its own heading, so the two domes actually turn to face their set
+        // headings instead of always rendering boresight-aligned.
+        var shapeP = instanceGridShape(primaryInst);
+        var gridP = resampleInstanceToCanonical(primaryInst, shapeP);
+        var thresholdDbmP = instanceThresholdDbm(primaryInst);
+        var shapeKeyP = domeMeshShapeKey(nT, nP);
+        if (mesh) mesh.visible = true;
+        if (wireMesh) wireMesh.visible = state.wire;
+        if (shapeKeyP !== lastMeshShapeKey){
+          buildGeometry();
+          displayGain = cloneGrid(gridP);
+          updateGeometryFromGain(displayGain, thresholdDbmP);
+          geometry.computeVertexNormals();
+          morphing = false;
+        } else if (morph){
+          startMorph(gridP, thresholdDbmP);
+        } else {
+          morphing = false;
+          displayGain = cloneGrid(gridP);
+          updateGeometryFromGain(displayGain, thresholdDbmP);
+        }
+        lastMeshShapeKey = shapeKeyP;
+
+        var shapeO = instanceGridShape(otherInst);
+        var gridO = resampleInstanceToCanonical(otherInst, shapeO);
+        var thresholdDbmO = instanceThresholdDbm(otherInst);
+        var shapeKeyO = domeMeshShapeKey(shapeO.elevDeg.length, shapeO.phiDeg.length);
+        if (!secondarySlot || secondarySlot.shapeKey !== shapeKeyO){
+          buildSecondaryGeometry(shapeO.elevDeg, shapeO.phiDeg);
+        } else {
+          secondarySlot.elevArr = shapeO.elevDeg;
+          secondarySlot.phiArr = shapeO.phiDeg;
+        }
+        secondarySlot.mesh.visible = true;
+        secondarySlot.mesh.material.opacity = state.coupledOpacity;
+        secondarySlot.wireMesh.visible = state.wire;
+        secondarySlot.wireMesh.material.opacity = 0.16*state.coupledOpacity;
+        updateSecondaryGeometryFromGain(gridO, thresholdDbmO);
+        secondarySlot.geometry.computeVertexNormals();
+
+        updateMeasuredCouplingNote();
+        refreshStatsDisplay(computeStats(gridP));
+        return;
+      }
+    }
+
+    // liveCoupling + "combined" dome mode, exactly 2 participants: same
+    // dual-semi-transparent-dome rendering as measuredCoupling above (user's
+    // explicit choice - see the plan), just sourced from the live N-body
+    // solve's participants/result instead of the precomputed pair library.
+    // For 3+ participants there's no dual-dome precedent, so it falls
+    // through unchanged to the generic merged-union path below (which
+    // already handles arbitrary N - each participant's instanceNativeGrid()
+    // is already carrying its live-solved correction).
+    if (state.combineMode === "liveCoupling"){
+      var liveParticipants = getLiveCouplingParticipants();
+      var lcResult = state.liveCoupling.result;
+      if (liveParticipants && liveParticipants.length === 2 && lcResult &&
+          lcResult.deltas[liveParticipants[0].id] && lcResult.deltas[liveParticipants[1].id]){
+        var loInstL = liveParticipants[0], hiInstL = liveParticipants[1];
+        var activeL = activeAntenna();
+        var primaryInstL = (activeL && (activeL.id===loInstL.id || activeL.id===hiInstL.id)) ? activeL : loInstL;
+        var otherInstL = (primaryInstL.id === loInstL.id) ? hiInstL : loInstL;
+
+        applyInstanceGlobals(primaryInstL);
+        var shapePL = instanceGridShape(primaryInstL);
+        var gridPL = resampleInstanceToCanonical(primaryInstL, shapePL);
+        var thresholdDbmPL = instanceThresholdDbm(primaryInstL);
+        var shapeKeyPL = domeMeshShapeKey(nT, nP);
+        if (mesh) mesh.visible = true;
+        if (wireMesh) wireMesh.visible = state.wire;
+        if (shapeKeyPL !== lastMeshShapeKey){
+          buildGeometry();
+          displayGain = cloneGrid(gridPL);
+          updateGeometryFromGain(displayGain, thresholdDbmPL);
+          geometry.computeVertexNormals();
+          morphing = false;
+        } else if (morph){
+          startMorph(gridPL, thresholdDbmPL);
+        } else {
+          morphing = false;
+          displayGain = cloneGrid(gridPL);
+          updateGeometryFromGain(displayGain, thresholdDbmPL);
+        }
+        lastMeshShapeKey = shapeKeyPL;
+
+        var shapeOL = instanceGridShape(otherInstL);
+        var gridOL = resampleInstanceToCanonical(otherInstL, shapeOL);
+        var thresholdDbmOL = instanceThresholdDbm(otherInstL);
+        var shapeKeyOL = domeMeshShapeKey(shapeOL.elevDeg.length, shapeOL.phiDeg.length);
+        if (!secondarySlot || secondarySlot.shapeKey !== shapeKeyOL){
+          buildSecondaryGeometry(shapeOL.elevDeg, shapeOL.phiDeg);
+        } else {
+          secondarySlot.elevArr = shapeOL.elevDeg;
+          secondarySlot.phiArr = shapeOL.phiDeg;
+        }
+        secondarySlot.mesh.visible = true;
+        secondarySlot.mesh.material.opacity = state.coupledOpacity;
+        secondarySlot.wireMesh.visible = state.wire;
+        secondarySlot.wireMesh.material.opacity = 0.16*state.coupledOpacity;
+        updateSecondaryGeometryFromGain(gridOL, thresholdDbmOL);
+        secondarySlot.geometry.computeVertexNormals();
+
+        refreshStatsDisplay(computeStats(gridPL));
+        return;
+      }
+    }
+    teardownSecondaryDome();
+
+    var combined = computeCombinedResult();
+    if (!combined){ showNoAntennasEnabled(); return; }
+    elevArr = combined.elevDeg; phiArr = combined.phiDeg;
+    nT = elevArr.length; nP = phiArr.length;
+    var uniform = gridAllEqual(combined.eirpGrid, nT, nP) && gridAllEqual(combined.freqGrid, nT, nP) && gridAllEqual(combined.threshGrid, nT, nP);
+    var shapeKey2 = domeMeshShapeKey(nT, nP);
+    if (mesh) mesh.visible = true;
+    if (wireMesh) wireMesh.visible = state.wire;
+    if (uniform){
+      // every enabled unit shares eirp/freq/threshold (trivially true for a
+      // single enabled instance, or a homogeneous multi-antenna array) - so
+      // this can reuse the exact scalar-threshold path/morph tween as the
+      // "single" case, and for exactly one enabled instance this is
+      // byte-for-byte the same computation as today's single-antenna dome.
+      TAG_EIRP_DBM = combined.eirpGrid[0][0];
+      FREQ_MHZ = combined.freqGrid[0][0];
+      TAG_PROFILE = (combined.units[0] && combined.units[0].profile) || TAG_PROFILE;
+      SNR_DB = TAG_PROFILE.snrDb;
+      var thr = combined.threshGrid[0][0];
+      if (shapeKey2 !== lastMeshShapeKey){
+        buildGeometry();
+        displayGain = cloneGrid(combined.gainGrid);
+        updateGeometryFromGain(displayGain, thr);
+        geometry.computeVertexNormals();
+        morphing = false;
+      } else if (morph){
+        startMorph(combined.gainGrid, thr);
+      } else {
+        morphing = false;
+        displayGain = cloneGrid(combined.gainGrid);
+        updateGeometryFromGain(displayGain, thr);
+      }
+    } else {
+      // mixed models/frequencies in the union: no single scalar threshold,
+      // so this always updates instantly (no morph tween) via the four
+      // per-cell grids - see updateGeometryFromCombined().
+      if (shapeKey2 !== lastMeshShapeKey) buildGeometry();
+      morphing = false;
+      displayGain = combined.gainGrid;
+      updateGeometryFromCombined(combined);
+      if (shapeKey2 !== lastMeshShapeKey) geometry.computeVertexNormals();
+    }
+    lastMeshShapeKey = shapeKey2;
+    refreshStatsDisplay(computeStatsCombined(combined));
+  }
+
+  // ---------------------------------------------------------------- tooltip / raycast
+  var raycaster = new THREE.Raycaster();
+  var pointer = new THREE.Vector2();
+  var tooltip = document.getElementById("tooltip");
+  var ttGain = document.getElementById("ttGain");
+  var ttAngles = document.getElementById("ttAngles");
+  var lastClientXY = null;
+
+  function onPointerMove(ev){
+    var rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((ev.clientX-rect.left)/rect.width)*2-1;
+    pointer.y = -((ev.clientY-rect.top)/rect.height)*2+1;
+    lastClientXY = [ev.clientX, ev.clientY];
+  }
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
+  renderer.domElement.addEventListener("pointerleave", function(){ lastClientXY=null; tooltip.hidden = true; });
+
+  function updateTooltip(){
+    if (!lastClientXY || !mesh || morphing){ tooltip.hidden = true; return; }
+    raycaster.setFromCamera(pointer, camera);
+    var hit = raycaster.intersectObject(mesh, false)[0];
+    if (!hit){ tooltip.hidden = true; return; }
+    var p = hit.point;
+    var r = Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+    if (r < 1e-4){ tooltip.hidden = true; return; }
+    var elev = Math.asin(Math.max(-1,Math.min(1,p.y/r)))*180/Math.PI;
+    var az = Math.atan2(p.z, p.x)*180/Math.PI; if (az<0) az += 360;
+
+    var elevStep = (elevArr[nT-1]-elevArr[0])/(nT-1);
+    var ti = Math.round((elev-elevArr[0])/elevStep);
+    ti = Math.max(0, Math.min(nT-1, ti));
+    var phiStep = 360/nP;
+    var pi = Math.round(az/phiStep) % nP;
+    var g = (displayGain||currentGainGrid())[ti][pi];
+    var km = rangeKmFromGain(g, currentThresholdDbm());
+
+    ttGain.textContent = fmtKm(km);
+    ttAngles.textContent = "el " + elev.toFixed(0) + "° · az " + az.toFixed(0) + "° · " + fmtDb(g) + " dBi";
+    tooltip.style.left = lastClientXY[0]+"px";
+    tooltip.style.top = lastClientXY[1]+"px";
+    tooltip.hidden = false;
+  }
+
+  // ---------------------------------------------------------------- resize / theme
+  function resize(){
+    var w = glHost.clientWidth, h = glHost.clientHeight;
+    camera.aspect = w/Math.max(1,h);
+    camera.updateProjectionMatrix();
+    renderer.setSize(w,h,false);
+    if (state.view === "2d") draw2D();
+  }
+  window.addEventListener("resize", resize);
+
+  function applyThemeColors(){
+    var bg = css("--bg");
+    scene.fog = new THREE.Fog(new THREE.Color(bg).getHex(), 10, 26);
+    renderer.setClearColor(new THREE.Color(bg), 1);
+    grid.material.color.set(css("--grid-line"));
+    boreLine.material.color.set(css("--accent"));
+    if (allModels) buildRangeRings();
+  }
+  if (window.matchMedia){
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyThemeColors);
+  }
+
+  // ---------------------------------------------------------------- load data + boot
+  // { modelKey: { label, polarizations: { horizontal: {terrainKey: entry, ...}, vertical: {...} } } }
+  var allModels = null;
+  var MODEL_ORDER = [];
+  var MODEL_META = {};
+  var MODEL_ABBR = { plc1669: "PLC1669", zda433: "ZDA433", wa5vjb_yagi: "WA5VJB", hg2412p: "HG2412P" };
+  var POL_META_LABEL = { horizontal: "H-pol", vertical: "V-pol", circular: "CP" };
+
+  // builds the terrain roster once at boot. Terrain/ground is shared by
+  // every antenna instance (unlike the old single-antenna app, where the
+  // roster was rebuilt per model/polarization since state.data was global);
+  // any live-mode instance (has a freeSpace baseline) can compute every
+  // canonical ground on the fly regardless of which .out files exist for
+  // it (see instanceNativeGrid/groundForKey). A non-live instance that
+  // lacks the selected terrain just falls back gracefully - see
+  // instanceHasWarning()/updateInstWarningNote().
+  function buildGlobalTerrainRoster(){
+    ENV_ORDER = ["freeSpace"].concat(CANONICAL_GROUNDS.map(function(g){ return g.key; }));
+    ENV_META = {};
+    ENV_ORDER.forEach(function(key, i){
+      if (key === "freeSpace"){
+        ENV_META[key] = { label: "Free space", colorHex: "#8d96a6", note: "No ground - antenna pattern only" };
+        return;
+      }
+      var g = groundForKey(key);
+      var note = (g && g.eps!=null && g.sigma!=null)
+        ? "&epsilon;<sub>r</sub> " + g.eps + ", &sigma; " + g.sigma + " S/m"
+        : "";
+      var meta = null;
+      for (var j=0;j<CANONICAL_GROUNDS.length;j++){
+        if (CANONICAL_GROUNDS[j].key === key){ meta = CANONICAL_GROUNDS[j]; break; }
+      }
+      ENV_META[key] = { label: meta ? meta.label : key, colorHex: GROUND_PALETTE[i % GROUND_PALETTE.length], note: note };
+    });
+    state.env = ENV_META.average ? "average" : ENV_ORDER[0];
+  }
+
+  function updateHeightMeta(){
+    var inst = activeAntenna();
+    if (inst) document.getElementById("heightMeta").textContent = inst.heightM.toFixed(1);
+  }
+  function updatePolMeta(){
+    var inst = activeAntenna();
+    if (inst) document.getElementById("polMeta").textContent = POL_META_LABEL[inst.polarization] || inst.polarization;
+  }
+  function updateAntennaCountMeta(){
+    var n = state.antennas.length, en = enabledAntennas().length;
+    document.getElementById("antennaCountMeta").textContent = n + (n===1?" antenna":" antennas") + (en!==n ? " (" + en + " enabled)" : "");
+  }
+
+  // true when the active instance's dataset can't show the currently
+  // selected global terrain at all (non-live model/polarization whose only
+  // baked-in dataset is some other terrain, e.g. plc1669 circular)
+  function instanceHasWarning(inst){
+    if (!inst || !inst.data) return false;
+    if (isLiveModeFor(inst.data)) return false;
+    return !inst.data[state.env];
+  }
+  function updateInstWarningNote(){
+    var inst = activeAntenna();
+    var note = document.getElementById("instWarningNote");
+    if (inst && instanceHasWarning(inst)){
+      note.hidden = false;
+      note.innerHTML = "This model/polarization has no live ground model &mdash; showing its only available terrain instead of &ldquo;" + (ENV_META[state.env]?ENV_META[state.env].label:state.env) + "&rdquo;.";
+    } else {
+      note.hidden = true;
+    }
+  }
+
+  // reads the active instance's tag profile - min/50%/95% SNR tiers (or an
+  // absolute dBm floor for a profile like zda433/FSK that's usually
+  // hardware-limited rather than ambient-noise-limited, see
+  // instanceThresholdDbm) differ a lot between models, so labels always
+  // reflect whichever instance is active rather than a shared baseline
+  function updateThresholdLabels(){
+    var inst = activeAntenna();
+    var profile = inst ? (TAG_PROFILES[inst.model] || TAG_PROFILES.plc1669) : TAG_PROFILES.plc1669;
+    Object.keys(profile.snrDb).forEach(function(tier){
+      var hwFloor = profile.sensitivityDbm && profile.sensitivityDbm[tier];
+      var label = (hwFloor != null) ? (hwFloor + " dBm floor") : (profile.snrDb[tier] + " dB SNR");
+      threshBtns[tier].querySelector("small").textContent = label;
+    });
+    document.getElementById("snrOffsetNote").innerHTML = profile.thresholdNote;
+  }
+  function updateLinkBudgetMeta(){
+    var inst = activeAntenna();
+    if (!inst) return;
+    var profile = TAG_PROFILES[inst.model] || TAG_PROFILES.plc1669;
+    document.getElementById("fsplFreqMeta").textContent = instanceFreqMhz(inst).toFixed(2);
+    document.getElementById("tagNote").innerHTML = profile.note;
+  }
+
+  function populateInstModelSelect(){
+    instModelSelect.innerHTML = "";
+    MODEL_ORDER.forEach(function(key){
+      var opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = MODEL_META[key].label;
+      instModelSelect.appendChild(opt);
+    });
+  }
+  // some models (e.g. the single-file 434 MHz synth) only have a horizontal
+  // dataset - hide the polarizations that model doesn't provide
+  function updateInstPolAvailability(inst){
+    var avail = allModels[inst.model].polarizations;
+    Object.keys(instPolBtns).forEach(function(k){
+      var has = !!avail[k];
+      instPolBtns[k].disabled = !has;
+      instPolBtns[k].hidden = !has;
+    });
+  }
+  // sets one instance's model/polarization/data - mirrors the old
+  // loadPolarization's height-reset safety net so a stale large height
+  // doesn't silently carry over onto a non-live dataset
+  function setInstanceDataset(inst, model, pol){
+    inst.model = model;
+    inst.polarization = pol;
+    inst.data = allModels[model].polarizations[pol];
+    if (!isLiveModeFor(inst.data)) inst.heightM = 6.0;
+  }
+
+  // non-null while the active instance's height/heading sliders are
+  // restricted to measuredCoupling's discrete sampled options (see
+  // getCoupledSlotOptions) - the sliders then carry an *index* into these
+  // arrays rather than a direct meters/degrees value.
+  var activeHeightOptions = null;
+  var activeHeadingOptions = null;
+
+  // repaints every Antennas-panel control from the active instance
+  function refreshAntennaControlsForActive(){
+    var inst = activeAntenna();
+    var n = state.antennas.length;
+    document.getElementById("addAntennaBtn").disabled = n >= MAX_ANTENNAS;
+    document.getElementById("removeAntennaBtn").disabled = n <= 1 || !inst;
+    if (!inst) return;
+
+    instModelSelect.value = inst.model;
+    updateInstPolAvailability(inst);
+    Object.keys(instPolBtns).forEach(function(k){
+      instPolBtns[k].setAttribute("aria-pressed", k===inst.polarization ? "true":"false");
+    });
+    document.getElementById("instEnabledToggle").checked = inst.enabled;
+
+    var slot = isLiveModeFor(inst.data) ? getCoupledSlotOptions(inst) : null;
+
+    var heightRow = document.getElementById("instHeightRow");
+    var heightSlider = document.getElementById("instHeightSlider");
+    var heightValueInput = document.getElementById("instHeightValue");
+    if (isLiveModeFor(inst.data)){
+      heightRow.hidden = false;
+      if (slot && slot.heights.length){
+        activeHeightOptions = slot.heights;
+        heightSlider.min = "0"; heightSlider.max = String(activeHeightOptions.length-1); heightSlider.step = "1";
+        var hIdx = nearestOptionIndex(activeHeightOptions, inst.heightM, false);
+        heightSlider.value = hIdx;
+        heightValueInput.value = activeHeightOptions[hIdx].toFixed(2);
+        heightValueInput.readOnly = true;
+      } else {
+        activeHeightOptions = null;
+        heightSlider.min = "1"; heightSlider.max = "30"; heightSlider.step = "0.5";
+        heightSlider.value = inst.heightM;
+        heightValueInput.value = inst.heightM.toFixed(1);
+        heightValueInput.readOnly = false;
+      }
+    } else {
+      heightRow.hidden = true;
+      activeHeightOptions = null;
+    }
+
+    var headingSlider = document.getElementById("instHeadingSlider");
+    var headingValueInput = document.getElementById("instHeadingValue");
+    if (slot && slot.headings.length){
+      activeHeadingOptions = slot.headings;
+      headingSlider.min = "0"; headingSlider.max = String(activeHeadingOptions.length-1); headingSlider.step = "1";
+      var hdIdx = nearestOptionIndex(activeHeadingOptions, inst.headingDeg, true);
+      headingSlider.value = hdIdx;
+      headingValueInput.value = activeHeadingOptions[hdIdx];
+      headingValueInput.readOnly = true;
+    } else {
+      activeHeadingOptions = null;
+      headingSlider.min = "0"; headingSlider.max = "359"; headingSlider.step = "1";
+      headingSlider.value = inst.headingDeg;
+      headingValueInput.value = inst.headingDeg;
+      headingValueInput.readOnly = false;
+    }
+    document.getElementById("instMountButtBtn").setAttribute("aria-pressed", inst.mount==="butt" ? "true":"false");
+    document.getElementById("instMountMidBtn").setAttribute("aria-pressed", inst.mount==="midpoint" ? "true":"false");
+
+    updatePolMeta();
+    updateHeightMeta();
+    updateThresholdLabels();
+    updateLinkBudgetMeta();
+    updateInstWarningNote();
+  }
+
+  // measuredCoupling toggle only makes sense for 2 enabled instances
+  // sharing model+polarization with a coupled dataset loaded - disable it
+  // otherwise, and silently fall back to union if the last qualifying pair
+  // was just removed/disabled/changed
+  function refreshCombineAvailability(){
+    // measuredCoupling eligibility does NOT depend on the actual
+    // height/heading values (any spacing/heading snaps to the nearest
+    // library sample - see getCoupledPairInfo) - only on there being
+    // exactly 2 enabled instances sharing model+polarization (non-circular)
+    // with a coupled dataset loaded for that pair.
+    var measuredBtn = document.getElementById("combineMeasuredBtn");
+    var measuredEligible = !!(allCoupled && getCoupledPairInfo());
+    measuredBtn.disabled = !measuredEligible;
+    if (!measuredEligible && state.combineMode === "measuredCoupling"){
+      state.combineMode = "union";
+      document.getElementById("combineUnionBtn").setAttribute("aria-pressed","true");
+      measuredBtn.setAttribute("aria-pressed","false");
+      document.getElementById("coupledOpacityRow").hidden = true;
+    }
+    updateMeasuredCouplingNote();
+    // eligibility (or which pair now qualifies) may have just changed, which
+    // changes whether the active instance's height/heading sliders should
+    // be discrete-restricted (see getCoupledSlotOptions) - repaint them here
+    // so every caller (add/remove/enable/model/pol change) stays in sync
+    // without each one needing its own explicit call.
+    refreshAntennaControlsForActive();
+  }
+
+  // shows which library heading/spacing sample measuredCoupling actually
+  // snapped to (real geometry rarely lands exactly on a precomputed sample)
+  function updateMeasuredCouplingNote(){
+    var note = document.getElementById("measuredCouplingNote");
+    if (state.combineMode !== "measuredCoupling"){ note.hidden = true; return; }
+    var pairInfo = getCoupledPairInfo();
+    if (!pairInfo){ note.hidden = true; return; }
+    note.hidden = false;
+    note.textContent = "Using library sample: heading " + pairInfo.heading + "°" +
+      (pairInfo.mirror ? " (mirrored)" : "") +
+      ", spacing " + pairInfo.sampleSpacingLambda.toFixed(2) + "λ" +
+      " (actual: heading " + pairInfo.rawHeading.toFixed(0) + "°, spacing " + pairInfo.spacingLambda.toFixed(2) + "λ).";
+  }
+
+  // live-coupling analog of refreshCombineAvailability()/
+  // updateMeasuredCouplingNote() combined: gates the "Live coupling" button
+  // on server availability + participant eligibility, and (when that mode is
+  // active) tracks whether the last computed result is still current for the
+  // instance configuration right now. Called from afterInstanceEdit()
+  // (covers every antenna edit path, including add/remove/model/pol which
+  // also call it), the boot-time server probe, and selectCombineMode().
+  function refreshLiveCouplingStatus(){
+    var lc = state.liveCoupling;
+    var btn = document.getElementById("combineLiveBtn");
+    var computeBtn = document.getElementById("computeCouplingBtn");
+    var note = document.getElementById("liveCouplingNote");
+    var participants = getLiveCouplingParticipants();
+
+    var eligible = !!(lc.serverAvailable && participants);
+    btn.disabled = !eligible;
+    if (!eligible && state.combineMode === "liveCoupling"){
+      state.combineMode = "union";
+      document.getElementById("combineUnionBtn").setAttribute("aria-pressed","true");
+      btn.setAttribute("aria-pressed","false");
+      document.getElementById("coupledOpacityRow").hidden = true;
+      document.getElementById("liveCouplingRow").hidden = true;
+    }
+
+    if (state.combineMode !== "liveCoupling"){
+      computeBtn.disabled = false;
+      return;
+    }
+
+    if (lc.status === "solving"){
+      note.textContent = "Solving live" + (participants ? " " + participants.length + "-antenna" : "") + " coupling (NEC, a few seconds)…";
+      computeBtn.disabled = true;
+      return;
+    }
+    if (lc.serverAvailable === null){
+      note.textContent = "Checking for a local coupling_server.py…";
+      computeBtn.disabled = true;
+      return;
+    }
+    if (!lc.serverAvailable){
+      note.textContent = "Live coupling requires coupling_server.py running locally (not detected).";
+      computeBtn.disabled = true;
+      return;
+    }
+    if (!participants){
+      note.textContent = "Add 2+ non-circular antennas sharing one frequency to enable live coupling.";
+      computeBtn.disabled = true;
+      return;
+    }
+
+    computeBtn.disabled = false;
+    var signature = liveCouplingSignature(participants);
+    var sameParticipants = lc.participantIds.length === participants.length &&
+      participants.every(function(a){ return lc.participantIds.indexOf(a.id) !== -1; });
+
+    if (lc.result && sameParticipants && signature === lc.requestSignature){
+      lc.status = "ready";
+      note.textContent = "Live-solved for " + participants.length + " antennas (heights/headings fully continuous, no snapping).";
+    } else if (lc.result){
+      lc.status = "stale";
+      note.textContent = "Antenna configuration changed since the last solve — showing the previous result. Click Compute coupling to refresh.";
+    } else if (lc.status === "error"){
+      note.textContent = "Live solve failed: " + (lc.error || "unknown error") + ". Click Compute coupling to retry.";
+    } else {
+      lc.status = "idle";
+      note.textContent = "Ready to solve live mutual coupling for " + participants.length + " antennas. Click Compute coupling.";
+    }
+  }
+
+  function selectActiveAntenna(idx){
+    if (idx < 0 || idx >= state.antennas.length) return;
+    state.activeAntennaIndex = idx;
+    renderAntennaChips();
+    refreshAntennaControlsForActive();
+    drawTower();
+    if (state.domeMode === "single") refreshDome();
+  }
+
+  function addAntennaInstance(){
+    if (!allModels || state.antennas.length >= MAX_ANTENNAS) return;
+    var template = activeAntenna();
+    var model = template ? template.model : (MODEL_ORDER.indexOf("plc1669")>=0 ? "plc1669" : MODEL_ORDER[0]);
+    var avail = allModels[model].polarizations;
+    var pol = template && avail[template.polarization] ? template.polarization : (avail.horizontal ? "horizontal" : Object.keys(avail)[0]);
+    var inst = makeAntennaInstance(model, pol);
+    setInstanceDataset(inst, model, pol);
+    state.antennas.push(inst);
+    state.activeAntennaIndex = state.antennas.length - 1;
+    renderAntennaChips();
+    refreshAntennaControlsForActive();
+    refreshCombineAvailability();
+    drawTower();
+    afterInstanceEdit();
+  }
+
+  function removeActiveAntenna(){
+    if (state.antennas.length <= 1) return;
+    state.antennas.splice(state.activeAntennaIndex, 1);
+    state.activeAntennaIndex = Math.max(0, Math.min(state.antennas.length-1, state.activeAntennaIndex));
+    renderAntennaChips();
+    refreshAntennaControlsForActive();
+    refreshCombineAvailability();
+    drawTower();
+    afterInstanceEdit();
+  }
+
+  function toggleActiveAntennaEnabled(enabled){
+    var inst = activeAntenna();
+    if (!inst) return;
+    inst.enabled = enabled;
+    renderAntennaChips();
+    refreshCombineAvailability();
+    updateAntennaCountMeta();
+    drawTower();
+    afterInstanceEdit();
+  }
+
+  function renderAntennaChips(){
+    var wrap = document.getElementById("antennaChips");
+    wrap.innerHTML = "";
+    state.antennas.forEach(function(inst, i){
+      var chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "antenna-chip";
+      chip.setAttribute("role","tab");
+      chip.setAttribute("aria-pressed", i===state.activeAntennaIndex ? "true":"false");
+      chip.setAttribute("data-enabled", inst.enabled ? "true":"false");
+      chip.dataset.antennaId = String(inst.id);
+      var label = (MODEL_ABBR[inst.model] || inst.model) + " #" + (i+1);
+      chip.innerHTML = '<span class="dot"></span><span>' + label + '</span>' + (instanceHasWarning(inst) ? '<span class="warn">&#9888;</span>' : '');
+      chip.addEventListener("click", function(){ selectActiveAntenna(i); });
+      wrap.appendChild(chip);
+    });
+    updateAntennaCountMeta();
+  }
+
+  // simple schematic mast diagram: a vertical line with one clickable dot
+  // per antenna instance, positioned by height and offset left/right by
+  // mount side, with a short heading tick
+  var towerMarkerHits = [];
+  function drawTower(){
+    var canvas = document.getElementById("towerCanvas");
+    if (!canvas) return;
+    var c = setupCanvas(canvas);
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0,0,w,h);
+    towerMarkerHits = [];
+    var padT=10, padB=22;
+    var mastX = w/2;
+    var maxH = 30;
+    var topY = padT, botY = h-padB;
+    function yForHeight(hM){ return botY - Math.max(0,Math.min(1,hM/maxH))*(botY-topY); }
+
+    var lineColor = css("--grid-line") || "#9aa5b1";
+    var textColor = css("--text-muted") || "#8d96a6";
+    var accent = css("--accent") || "#a8481a";
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mastX, topY); ctx.lineTo(mastX, botY); ctx.stroke();
+    ctx.fillStyle = textColor;
+    ctx.font = "9px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    [0,10,20,30].forEach(function(hM){
+      var y = yForHeight(hM);
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath(); ctx.moveTo(mastX-4,y); ctx.lineTo(mastX+4,y); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillText(hM+"m", mastX+8, y);
+    });
+
+    state.antennas.forEach(function(inst, i){
+      var y = yForHeight(inst.heightM);
+      var side = inst.mount === "butt" ? -1 : 1;
+      var x = mastX + side*16;
+      var isActive = i === state.activeAntennaIndex;
+      var dotColor = inst.enabled ? (isActive ? accent : textColor) : "rgba(141,150,166,0.35)";
+      ctx.fillStyle = dotColor;
+      ctx.beginPath();
+      ctx.arc(x, y, isActive?6:4.5, 0, Math.PI*2);
+      ctx.fill();
+      if (isActive){ ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.stroke(); }
+      var rad = (inst.headingDeg-90)*Math.PI/180;
+      ctx.strokeStyle = dotColor;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(rad)*10, y+Math.sin(rad)*10*0.4); ctx.stroke();
+      ctx.fillStyle = textColor;
+      ctx.font = "8.5px 'IBM Plex Mono', monospace";
+      ctx.textAlign = side>0 ? "left" : "right";
+      ctx.fillText(inst.headingDeg+"°", x+side*10, y-8);
+      towerMarkerHits.push({ x:x, y:y, r:9, index:i });
+    });
+  }
+  var towerCanvasEl = document.getElementById("towerCanvas");
+  towerCanvasEl.addEventListener("click", function(ev){
+    var rect = towerCanvasEl.getBoundingClientRect();
+    var px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+    var best=null, bestD=1e9;
+    towerMarkerHits.forEach(function(m){
+      var d = Math.sqrt((px-m.x)*(px-m.x)+(py-m.y)*(py-m.y));
+      if (d<=m.r+4 && d<bestD){ bestD=d; best=m; }
+    });
+    if (best) selectActiveAntenna(best.index);
+  });
+
+  var towerToggle = document.getElementById("towerToggle");
+  var towerPanelEl = document.getElementById("towerPanel");
+  function setTowerCollapsed(collapsed){
+    towerPanelEl.classList.toggle("collapsed", collapsed);
+    towerToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    if (!collapsed) drawTower(); // canvas was display:none, may be stale/blank
+  }
+  towerToggle.addEventListener("click", function(){
+    setTowerCollapsed(!towerPanelEl.classList.contains("collapsed"));
+  });
+  towerToggle.addEventListener("keydown", function(ev){
+    if (ev.key === "Enter" || ev.key === " "){
+      ev.preventDefault();
+      setTowerCollapsed(!towerPanelEl.classList.contains("collapsed"));
+    }
+  });
+
+  // ---- Antennas panel wiring
+  var instModelSelect = document.getElementById("instModelSelect");
+  var instPolBtns = {
+    horizontal: document.getElementById("instPolHBtn"),
+    vertical: document.getElementById("instPolVBtn"),
+    circular: document.getElementById("instPolCBtn")
+  };
+  document.getElementById("addAntennaBtn").addEventListener("click", addAntennaInstance);
+  document.getElementById("removeAntennaBtn").addEventListener("click", removeActiveAntenna);
+  document.getElementById("instEnabledToggle").addEventListener("change", function(ev){
+    toggleActiveAntennaEnabled(ev.target.checked);
+  });
+  instModelSelect.addEventListener("change", function(){
+    var inst = activeAntenna();
+    if (!inst || instModelSelect.value === inst.model) return;
+    var model = instModelSelect.value;
+    var avail = allModels[model].polarizations;
+    var pol = avail[inst.polarization] ? inst.polarization : (avail.horizontal ? "horizontal" : Object.keys(avail)[0]);
+    setInstanceDataset(inst, model, pol);
+    refreshAntennaControlsForActive();
+    refreshCombineAvailability();
+    renderAntennaChips();
+    drawTower();
+    afterInstanceEdit();
+  });
+  function selectInstPolarization(pol){
+    var inst = activeAntenna();
+    if (!inst || pol === inst.polarization) return;
+    setInstanceDataset(inst, inst.model, pol);
+    refreshAntennaControlsForActive();
+    refreshCombineAvailability();
+    renderAntennaChips();
+    afterInstanceEdit();
+  }
+  instPolBtns.horizontal.addEventListener("click", function(){ selectInstPolarization("horizontal"); });
+  instPolBtns.vertical.addEventListener("click", function(){ selectInstPolarization("vertical"); });
+  instPolBtns.circular.addEventListener("click", function(){ selectInstPolarization("circular"); });
+
+  document.getElementById("instHeightSlider").addEventListener("input", function(ev){
+    var inst = activeAntenna();
+    if (!inst) return;
+    if (activeHeightOptions){
+      var idx = Math.max(0, Math.min(activeHeightOptions.length-1, parseInt(ev.target.value, 10)));
+      inst.heightM = activeHeightOptions[idx];
+      document.getElementById("instHeightValue").value = inst.heightM.toFixed(2);
+    } else {
+      inst.heightM = parseFloat(ev.target.value);
+      document.getElementById("instHeightValue").value = inst.heightM.toFixed(1);
+    }
+    updateHeightMeta();
+    drawTower();
+    afterInstanceEdit();
+  });
+  document.getElementById("instHeadingSlider").addEventListener("input", function(ev){
+    var inst = activeAntenna();
+    if (!inst) return;
+    if (activeHeadingOptions){
+      var hIdx = Math.max(0, Math.min(activeHeadingOptions.length-1, parseInt(ev.target.value, 10)));
+      inst.headingDeg = activeHeadingOptions[hIdx];
+    } else {
+      inst.headingDeg = parseInt(ev.target.value, 10);
+    }
+    document.getElementById("instHeadingValue").value = inst.headingDeg;
+    drawTower();
+    afterInstanceEdit();
+  });
+  document.getElementById("instHeightValue").addEventListener("change", function(ev){
+    var inst = activeAntenna();
+    if (!inst || activeHeightOptions) return; // readonly while coupling-restricted
+    var slider = document.getElementById("instHeightSlider");
+    var v = parseFloat(ev.target.value);
+    if (!isFinite(v)) v = inst.heightM;
+    v = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v));
+    inst.heightM = v;
+    ev.target.value = v.toFixed(1);
+    slider.value = v;
+    updateHeightMeta();
+    drawTower();
+    afterInstanceEdit();
+  });
+  document.getElementById("instHeadingValue").addEventListener("change", function(ev){
+    var inst = activeAntenna();
+    if (!inst || activeHeadingOptions) return; // readonly while coupling-restricted
+    var slider = document.getElementById("instHeadingSlider");
+    var v = parseInt(ev.target.value, 10);
+    if (!isFinite(v)) v = inst.headingDeg;
+    v = ((v % 360) + 360) % 360;
+    inst.headingDeg = v;
+    ev.target.value = v;
+    slider.value = v;
+    drawTower();
+    afterInstanceEdit();
+  });
+  function selectInstMount(mount){
+    var inst = activeAntenna();
+    if (!inst || inst.mount === mount) return;
+    inst.mount = mount;
+    document.getElementById("instMountButtBtn").setAttribute("aria-pressed", mount==="butt"?"true":"false");
+    document.getElementById("instMountMidBtn").setAttribute("aria-pressed", mount==="midpoint"?"true":"false");
+    drawTower();
+  }
+  document.getElementById("instMountButtBtn").addEventListener("click", function(){ selectInstMount("butt"); });
+  document.getElementById("instMountMidBtn").addEventListener("click", function(){ selectInstMount("midpoint"); });
+
+  // ---- dome-mode / combine-mode wiring
+  function selectDomeMode(mode){
+    if (state.domeMode === mode) return;
+    state.domeMode = mode;
+    document.getElementById("domeCombinedBtn").setAttribute("aria-pressed", mode==="combined"?"true":"false");
+    document.getElementById("domeSingleBtn").setAttribute("aria-pressed", mode==="single"?"true":"false");
+    document.getElementById("combineModeRow").hidden = mode !== "combined";
+    if (allModels) refreshDome();
+  }
+  document.getElementById("domeCombinedBtn").addEventListener("click", function(){ selectDomeMode("combined"); });
+  document.getElementById("domeSingleBtn").addEventListener("click", function(){ selectDomeMode("single"); });
+
+  function selectCombineMode(mode){
+    if (state.combineMode === mode) return;
+    if (mode === "measuredCoupling" && document.getElementById("combineMeasuredBtn").disabled) return;
+    if (mode === "liveCoupling" && document.getElementById("combineLiveBtn").disabled) return;
+    state.combineMode = mode;
+    document.getElementById("combineUnionBtn").setAttribute("aria-pressed", mode==="union"?"true":"false");
+    document.getElementById("combineMeasuredBtn").setAttribute("aria-pressed", mode==="measuredCoupling"?"true":"false");
+    document.getElementById("combineLiveBtn").setAttribute("aria-pressed", mode==="liveCoupling"?"true":"false");
+    document.getElementById("coupledOpacityRow").hidden = (mode !== "measuredCoupling" && mode !== "liveCoupling");
+    document.getElementById("liveCouplingRow").hidden = mode !== "liveCoupling";
+    updateMeasuredCouplingNote();
+    refreshLiveCouplingStatus();
+    if (allModels){
+      refreshAntennaControlsForActive();
+      refreshDome();
+      if (state.view === "2d") draw2D();
+    }
+  }
+  document.getElementById("combineUnionBtn").addEventListener("click", function(){ selectCombineMode("union"); });
+  document.getElementById("combineMeasuredBtn").addEventListener("click", function(){ selectCombineMode("measuredCoupling"); });
+  document.getElementById("combineLiveBtn").addEventListener("click", function(){ selectCombineMode("liveCoupling"); });
+
+  document.getElementById("coupledOpacitySlider").addEventListener("input", function(ev){
+    state.coupledOpacity = parseFloat(ev.target.value);
+    document.getElementById("coupledOpacityValue").textContent = Math.round(state.coupledOpacity*100) + "%";
+    if (secondarySlot && secondarySlot.mesh){
+      secondarySlot.mesh.material.opacity = state.coupledOpacity;
+      secondarySlot.wireMesh.material.opacity = 0.16 * state.coupledOpacity;
+    }
+  });
+
+  // "Compute coupling" - POSTs the current live-eligible instance
+  // configuration to the local coupling_server.py process (see that file's
+  // module docstring) for an on-demand N-body NEC solve. Keeps the last
+  // successful result visible on failure/staleness rather than reverting -
+  // an in-progress exploration shouldn't lose its last-good correction just
+  // because a subsequent edit or a transient server error occurred.
+  document.getElementById("computeCouplingBtn").addEventListener("click", function(){
+    var participants = getLiveCouplingParticipants();
+    if (!participants || !state.liveCoupling.serverAvailable) return;
+    var lc = state.liveCoupling;
+    var requestIds = participants.map(function(a){ return a.id; });
+    var requestSignature = liveCouplingSignature(participants);
+    lc.status = "solving";
+    refreshLiveCouplingStatus();
+    fetch("compute-coupling", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ antennas: participants.map(function(a){
+        return { id: a.id, model: a.model, polarization: a.polarization, heightM: a.heightM, headingDeg: a.headingDeg };
+      }) })
+    }).then(function(r){ return r.json().then(function(data){ return { ok: r.ok, data: data }; }); })
+      .then(function(res){
+        if (!res.ok || !res.data || !res.data.ok){
+          lc.status = "error";
+          lc.error = (res.data && res.data.message) || "server error";
+          refreshLiveCouplingStatus();
+          return;
+        }
+        lc.result = res.data;
+        lc.participantIds = requestIds;
+        lc.requestSignature = requestSignature;
+        lc.error = null;
+        lc.status = null; // let refreshLiveCouplingStatus() below re-derive ready/stale from the result
+        refreshLiveCouplingStatus();
+        refreshDome();
+        if (state.view === "2d") draw2D();
+      })
+      .catch(function(err){
+        lc.status = "error";
+        lc.error = String(err);
+        refreshLiveCouplingStatus();
+      });
+  });
+
+  // coupled_patterns.json is optional/best-effort - a fetch failure there
+  // (e.g. file not deployed) just leaves the measuredCoupling mode disabled
+  // rather than blocking the rest of the app from loading
+  var coupledFetch = fetch("coupled_patterns.json").then(function(r){ return r.json(); }).catch(function(){ return null; });
+
+  // compute-coupling is served only by coupling_server.py (not plain
+  // `python -m http.server`) - same best-effort degrade pattern as
+  // coupledFetch above: a failure just leaves Live coupling disabled.
+  fetch("compute-coupling").then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+    .then(function(data){
+      state.liveCoupling.serverAvailable = !!(data && data.available);
+      if (allModels) refreshLiveCouplingStatus();
+    });
+
+  fetch("patterns.json").then(function(r){ return r.json(); }).then(function(data){
+    allModels = data;
+    MODEL_ORDER = Object.keys(data);
+    MODEL_ORDER.forEach(function(key){
+      MODEL_META[key] = { label: data[key].label || key };
+    });
+    populateInstModelSelect();
+
+    var defaultModel = MODEL_ORDER.indexOf("plc1669") >= 0 ? "plc1669" : MODEL_ORDER[0];
+    var avail = allModels[defaultModel].polarizations;
+    var defaultPol = avail.horizontal ? "horizontal" : Object.keys(avail)[0];
+    var inst = makeAntennaInstance(defaultModel, defaultPol);
+    setInstanceDataset(inst, defaultModel, defaultPol);
+    state.antennas = [inst];
+    state.activeAntennaIndex = 0;
+
+    buildGlobalTerrainRoster();
+    terrainGrid.innerHTML = "";
+    buildTerrainButtons();
+    Array.prototype.forEach.call(terrainGrid.children, function(b,i){
+      b.setAttribute("aria-pressed", ENV_ORDER[i]===state.env ? "true":"false");
+    });
+    document.getElementById("groundNote").innerHTML = ENV_META[state.env].note;
+
+    renderAntennaChips();
+    refreshAntennaControlsForActive();
+    drawTower();
+
+    applyThemeColors();
+    refreshLegend();
+    buildLegendGradient();
+    groundMat.color.set(ENV_META[state.env].colorHex);
+    buildRangeRings();
+    resize();
+
+    coupledFetch.then(function(data){
+      allCoupled = data;
+      refreshCombineAvailability();
+      refreshDome();
+      if (state.view === "2d") draw2D();
+    });
+
+    refreshCombineAvailability();
+    refreshLiveCouplingStatus();
+    refreshDome();
+    if (state.view === "2d") draw2D();
+    animate();
+  }).catch(function(err){
+    document.getElementById("groundNote").textContent = "Failed to load pattern data: " + err;
+  });
+
+  function animate(now){
+    requestAnimationFrame(animate);
+    // skip the WebGL render/controls/raycast work entirely while the 2D view
+    // is showing - it's not visible, so there's nothing to save resources
+    // for by keeping it running (rAF loop itself stays alive so 3D resumes
+    // instantly, mid-morph frames just jump to their end state on return)
+    if (state.view !== "3d") return;
+    if (morphing) stepMorph(now||performance.now());
+    controls.update();
+    updateTooltip();
+    renderer.render(scene, camera);
+  }
+})();
+</script>

@@ -1,0 +1,824 @@
+<meta charset="utf-8">
+<title>NanoTag Range Envelope</title>
+<meta name="description" content="Link-budget estimate of Motus NanoTag detection range vs. bird altitude across six ground types, combining a 0.1 mW Lotek tag with the PLC1669 Yagi's NEC2 elevation gain pattern at 166.380 MHz">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --ink: #1c2321;
+    --ink-dim: #5a625e;
+    --line: #dcd9d0;
+    --line-strong: #b9b4a6;
+    --accent: #1c5d6e;
+    --accent-soft: #e4eef0;
+
+    --c-quiet: #1c5d6e;
+    --c-typical: #a3852a;
+    --c-noisy: #c15b2a;
+    --c-horizon: #8a8478;
+
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14181a;
+      --surface: #1b2124;
+      --ink: #eceae4;
+      --ink-dim: #a4a99f;
+      --line: #303834;
+      --line-strong: #454f49;
+      --accent: #5aa9bd;
+      --accent-soft: #1e2f32;
+
+      --c-quiet: #5aa9bd;
+      --c-typical: #cfa94a;
+      --c-noisy: #e08356;
+      --c-horizon: #9a988c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181a;
+    --surface: #1b2124;
+    --ink: #eceae4;
+    --ink-dim: #a4a99f;
+    --line: #303834;
+    --line-strong: #454f49;
+    --accent: #5aa9bd;
+    --accent-soft: #1e2f32;
+
+    --c-quiet: #5aa9bd;
+    --c-typical: #cfa94a;
+    --c-noisy: #e08356;
+    --c-horizon: #9a988c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    padding: clamp(20px, 4vw, 48px) 16px 40px;
+  }
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  header h1 {
+    font-size: clamp(24px, 3.4vw, 32px);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  header p {
+    margin: 0;
+    color: var(--ink-dim);
+    max-width: 62ch;
+    line-height: 1.55;
+    font-size: 15px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: clamp(16px, 2.6vw, 28px);
+  }
+
+  /* terrain switcher */
+  .terrain-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: clamp(12px, 2vw, 18px) clamp(16px, 2.6vw, 28px);
+  }
+  .terrain-bar-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+  .terrain-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .terrain-btn {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .terrain-btn:hover { border-color: var(--accent); }
+  .terrain-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .terrain-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--line);
+    display: inline-block;
+    margin: 0 2px;
+  }
+  .compare-btn { font-weight: 500; }
+  .compare-btn.active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
+
+  .assumptions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px 28px;
+  }
+  .assumptions dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    margin-bottom: 3px;
+  }
+  .assumptions dd {
+    margin: 0;
+    font-size: 14.5px;
+  }
+  .assumptions dd.sub {
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .assumptions .val {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+  }
+
+  .chart-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .chart-head h2 {
+    font-size: 17px;
+    margin: 0;
+  }
+  .chart-sub {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--ink-dim);
+    line-height: 1.5;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .swatch {
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .swatch.dash {
+    background: repeating-linear-gradient(90deg, var(--c-horizon) 0 4px, transparent 4px 7px);
+  }
+  .swatch.ref {
+    background: repeating-linear-gradient(90deg, var(--ink-dim) 0 3px, transparent 3px 6px);
+  }
+
+  svg { width: 100%; height: auto; display: block; }
+  .gridline { stroke: var(--line); stroke-width: 1; }
+  .axis-line { stroke: var(--line-strong); stroke-width: 1; }
+  .tick-label { fill: var(--ink-dim); font-size: 11px; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .axis-label { fill: var(--ink-dim); font-size: 12px; }
+  .curve { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+  .horizon-line { fill: none; stroke: var(--c-horizon); stroke-width: 1.6; stroke-dasharray: 4 5; }
+  .ref-line { stroke: var(--ink-dim); stroke-width: 1.4; stroke-dasharray: 3 5; }
+  .ref-label { fill: var(--ink-dim); font-size: 11px; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .terrain-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .tlegend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .tlegend-item.active { color: var(--ink); font-weight: 600; }
+
+  .subchart-title {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-dim);
+    margin: 22px 0 8px;
+  }
+  .subchart-title:first-of-type { margin-top: 4px; }
+
+  canvas.heatmap {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+  }
+  .colorbar { margin-top: 20px; }
+  .colorbar-track {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(to right, #1e2224 0%, #1c5d6e 28.6%, #a3852a 50%, #c15b2a 64.3%, #e6af5a 100%);
+    position: relative;
+  }
+  .colorbar-ticks {
+    position: relative;
+    height: 40px;
+  }
+  .colorbar-ticks .tick {
+    position: absolute;
+    top: 6px;
+    transform: translateX(-50%);
+    font-size: 10.5px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--ink-dim);
+    text-align: center;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .colorbar-ticks .tick b {
+    display: block;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: right;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    color: var(--ink-dim);
+    font-weight: 500;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .tbl-wrap { overflow-x: auto; }
+  .tbl-note {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    line-height: 1.55;
+  }
+
+  .notes h2 { font-size: 16px; margin: 0 0 10px; }
+  .notes ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 9px; }
+  .notes li { line-height: 1.55; font-size: 14px; color: var(--ink); }
+  .notes b { font-weight: 600; }
+
+  footer {
+    color: var(--ink-dim);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+</style>
+
+<div class="page">
+  <div class="card terrain-bar">
+    <div class="terrain-bar-label">Ground / terrain type</div>
+    <div class="terrain-buttons" id="terrain-buttons">
+      <button type="button" class="terrain-btn active" data-terrain="average">Average ground</button>
+      <button type="button" class="terrain-btn" data-terrain="desert">Desert</button>
+      <button type="button" class="terrain-btn" data-terrain="seawater">Seawater</button>
+      <button type="button" class="terrain-btn" data-terrain="forest">Forest</button>
+      <button type="button" class="terrain-btn" data-terrain="freshwater">Freshwater</button>
+      <button type="button" class="terrain-btn" data-terrain="grassland">Grassland</button>
+      <span class="terrain-sep"></span>
+      <button type="button" class="terrain-btn compare-btn" id="compare-btn">Compare all terrains</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>NanoTag Range Envelope</h1>
+    <p>Estimated maximum detection range for a Lotek 166.380&nbsp;MHz NanoTag against the PLC1669 9‑element Yagi (6&nbsp;m AGL), as a function of the tag's flight altitude and the station's ground type — combining a free‑space link budget with NEC2 elevation‑gain patterns modelled for six terrains.</p>
+  </header>
+
+  <section class="card assumptions mono-nums">
+    <div>
+      <dt>Tag output power</dt>
+      <dd class="val">0.1 mW peak (−10 dBm)</dd>
+    </div>
+    <div>
+      <dt>Tag antenna gain (assumed)</dt>
+      <dd class="val">−6 dBi</dd>
+      <dd class="sub">~18 cm whip ≈ 0.1&nbsp;λ — see notes</dd>
+    </div>
+    <div>
+      <dt>Frequency</dt>
+      <dd class="val">166.380 MHz</dd>
+    </div>
+    <div>
+      <dt>Receive antenna</dt>
+      <dd class="val">PLC1669, 6 m AGL, over <span id="terrain-inline">average ground</span></dd>
+    </div>
+    <div>
+      <dt>Propagation model</dt>
+      <dd class="val">Free‑space (Friis), LOS only</dd>
+    </div>
+    <div>
+      <dt>Pulse / burst</dt>
+      <dd class="val">2.5 ms × 4, every 4–40 s</dd>
+    </div>
+    <div>
+      <dt>Pulse-detection SNR floor</dt>
+      <dd class="val">6 dB (fixed)</dd>
+      <dd class="sub">confirmed algorithm threshold — only the station noise floor varies below</dd>
+    </div>
+    <div>
+      <dt>Commonly quoted station range</dt>
+      <dd class="val">~15 km</dd>
+      <dd class="sub">reference line on both charts</dd>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="chart-head">
+      <h2>Max. range vs. tag altitude</h2>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--c-quiet)"></span>quiet station (−120 dBm)</span>
+        <span><span class="swatch" style="background:var(--c-typical)"></span>typical station (−105 dBm)</span>
+        <span><span class="swatch" style="background:var(--c-noisy)"></span>noisy station (−95 dBm)</span>
+        <span><span class="swatch dash"></span>radio horizon</span>
+        <span><span class="swatch ref"></span>~15 km reference</span>
+      </div>
+    </div>
+    <p class="chart-sub" id="chart-mode-note">Showing <b>average ground</b>.</p>
+    <svg id="chart" viewBox="0 0 860 480" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="terrain-legend" id="terrain-legend" hidden></div>
+  </section>
+
+  <section class="card heatmap-shell">
+    <div class="chart-head">
+      <h2>Signal strength field</h2>
+      <div class="legend">
+        <span><span class="swatch ref"></span>~15 km reference</span>
+        <span><span class="swatch dash"></span>radio horizon</span>
+      </div>
+    </div>
+    <p class="chart-sub">Every point is the modelled received power P<sub>rx</sub>(dBm) for that exact distance/altitude pair under the selected ground type — not just whether it clears a threshold. Dashed contours are the same quiet/typical/noisy boundaries as the chart above.</p>
+
+    <h3 class="subchart-title">0–30 km — honed in near the ~15 km reference</h3>
+    <canvas class="heatmap" id="heatmap-mid" width="860" height="480"></canvas>
+
+    <h3 class="subchart-title">0–1 km — first kilometre, high detail</h3>
+    <canvas class="heatmap" id="heatmap-near" width="860" height="480"></canvas>
+
+    <div class="colorbar">
+      <div class="colorbar-track"></div>
+      <div class="colorbar-ticks">
+        <div class="tick" style="left:0%">−140<br>dBm<br>no signal</div>
+        <div class="tick" style="left:28.6%"><b>−120</b>quiet<br>floor</div>
+        <div class="tick" style="left:50%"><b>−105</b>typical<br>floor</div>
+        <div class="tick" style="left:64.3%"><b>−95</b>noisy<br>floor</div>
+        <div class="tick" style="left:100%">−70<br>dBm<br>strong</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Altitude AGL</th><th>Quiet</th><th>Typical</th><th>Noisy</th><th>Radio horizon</th></tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+    <p class="tbl-note" id="tbl-note"></p>
+  </section>
+
+  <section class="card notes">
+    <h2>Reading this chart</h2>
+    <ul>
+      <li><b>Tag antenna gain is derived, not guessed.</b> A ~18&nbsp;cm whip at 166.38&nbsp;MHz is about 0.1&nbsp;λ (λ≈1.80&nbsp;m) — far short of a resonant quarter‑wave (~45&nbsp;cm). Modelled as a short monopole, its radiation resistance is only R<sub>r</sub>≈40π²(h/λ)²≈4&nbsp;Ω, comparable to plausible internal/matching loss resistance, so a meaningful share of the already‑tiny 0.1&nbsp;mW never leaves the antenna. Combined with free‑space short‑dipole directivity (~1.8&nbsp;dBi) and an orientation/polarization derate for a tag riding on a moving bird, the working estimate is <b>−6&nbsp;dBi</b>. This is still the single largest uncertainty in the model: ±3&nbsp;dB here shifts every range value by roughly ×1.4 or ×0.7.</li>
+      <li><b>Ground type has a fairly small effect on this boresight cut</b> — switch terrains above and most range values move by only a percent or two. Seawater and freshwater (highly reflective, low‑loss surfaces) push the range fractionally higher; desert (dry, lossier) pulls it fractionally lower; average ground, forest and grassland land within noise of one another at this antenna's boresight. The bigger terrain effects in a full NEC2 model show up off‑boresight and very near the ground, not in this cut.</li>
+      <li><b>The 6&nbsp;dB SNR requirement is fixed, not assumed</b> — it's the actual floor the pulse-detection algorithm runs at. All three station scenarios use the same 6&nbsp;dB margin; what differs is only the station's own noise floor (thermal + receiver noise figure for "quiet", rising with coax/power‑supply RFI for "typical" and "noisy"), consistent with the −52 to −80&nbsp;dB relative‑unit range Motus operators report in the field.</li>
+      <li><b>The ~15&nbsp;km figure holds up reasonably well as a rough station‑range number</b> — but only in a fairly narrow band. Pick a terrain above and check the note under the table: a quiet station typically first reaches 15&nbsp;km around a few hundred metres AGL, a typical station somewhat higher, and a noisy station rarely gets there at all. So "~15&nbsp;km" is best read as roughly what a reasonably clean station can hear from a bird at a few hundred metres — not a number that applies uniformly at every altitude (a quiet station reaches over 100&nbsp;km by 3000&nbsp;m, see the table below).</li>
+      <li><b>Curves are jagged, not smooth — that's real, not noise in the calculation.</b> They come from ground-reflection lobing in the antenna's elevation pattern: as altitude changes, the elevation angle at maximum range sweeps across a comb of lobes and nulls, so the outer edge of detectability can jump between adjacent lobes rather than varying smoothly. The signal-strength fields above show why — the underlying dBm surface itself is lobed, and each dashed contour just traces the outermost place it crosses a fixed threshold.</li>
+      <li><b>Near-ground tags (0–6 m, at or below the antenna's own mounting height) get a ground-roughness floor, not a raw null.</b> A perfectly flat, homogeneous NEC2 ground plane predicts near-total destructive interference right at grazing incidence — but real terrain isn't a perfect mirror at that shallow angle, so it scatters diffusely instead of cancelling to near-zero. This model caps that null at −15 dB relative to boresight gain (see <code>GROUND_ROUGHNESS_FLOOR_DB</code>), which is why the quiet/typical/noisy curves go flat rather than to zero for altitudes 0–6 m: a tag sitting 1 m off the ground at a quiet station is still predicted detectable out to roughly 4 km, ~700 m at a typical station — consistent with community reports of several-hundred-metres-to-~1 km ground-level range (700–1200 m with smaller 5–6 element Yagis at lower mast heights). Treat the exact floor value as an estimate, not a measurement — real terrain roughness varies by site.</li>
+      <li><b>The radio horizon (dashed) is a hard physical ceiling</b> from Earth curvature, not from signal strength — at these tag powers, link budget runs out long before line-of-sight does, so this line stays well beyond all three curves and rarely matters in practice.</li>
+      <li>No vegetation, terrain shadowing, or fuselage/body absorption loss is modelled beyond the ground-reflection effect already baked into each terrain's NEC2 pattern — real obstructed paths (forest canopy, hills) will fall well short of these numbers.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Link budget: P<sub>rx</sub> = P<sub>tx</sub> + G<sub>tag</sub> − FSPL(d, 166.38 MHz) + G<sub>rx</sub>(elevation, selected ground type, NEC2). P<sub>tx</sub>=−10 dBm, G<sub>tag</sub>=−6 dBi (0.1λ whip estimate). Elevation = atan2(altitude − 6 m, horizontal distance). Sensitivity = station noise floor + 6 dB fixed SNR. Radio horizon uses the 4/3‑Earth approximation, 4.12·(√h₁+√h₂) km. Ground types (average, desert, seawater, forest, freshwater, grassland) are separate NEC2 elevation-gain runs at the same antenna geometry. Field noise-floor figures referenced from the Motus community thread "Maximum detection range of Lotek nanotags" (community.motus.org).
+  </footer>
+</div>
+
+<script>
+const ALTS=[0,1,2,3,4,5,6,8,10,15,20,25,30,35,40,45,50,75,100,125,150,175,200,225,250,275,300,325,350,375,400,425,450,475,500,525,550,575,600,625,650,675,700,725,750,775,800,825,850,875,900,925,950,975,1000,1025,1050,1075,1100,1125,1150,1175,1200,1225,1250,1275,1300,1325,1350,1375,1400,1425,1450,1475,1500,1525,1550,1575,1600,1625,1650,1675,1700,1725,1750,1775,1800,1825,1850,1875,1900,1925,1950,1975,2000,2025,2050,2075,2100,2125,2150,2175,2200,2225,2250,2275,2300,2325,2350,2375,2400,2425,2450,2475,2500,2525,2550,2575,2600,2625,2650,2675,2700,2725,2750,2775,2800,2825,2850,2875,2900,2925,2950,2975,3000];
+const HOR=[10.09,14.21,15.92,17.23,18.33,19.3,20.18,21.75,23.12,26.05,28.52,30.69,32.66,34.47,36.15,37.73,39.22,45.77,51.29,56.15,60.55,64.59,68.36,71.89,75.23,78.41,81.45,84.37,87.17,89.88,92.49,95.03,97.49,99.89,102.22,104.49,106.71,108.89,111.01,113.09,115.13,117.13,119.1,121.03,122.92,124.79,126.62,128.43,130.21,131.96,133.69,135.4,137.08,138.74,140.38,142.0,143.6,145.18,146.74,148.28,149.81,151.32,152.81,154.29,155.76,157.21,158.64,160.06,161.47,162.87,164.25,165.62,166.98,168.32,169.66,170.98,172.3,173.6,174.89,176.17,177.45,178.71,179.96,181.21,182.44,183.67,184.89,186.1,187.3,188.49,189.68,190.86,192.03,193.19,194.34,195.49,196.63,197.77,198.89,200.01,201.13,202.24,203.34,204.43,205.52,206.6,207.68,208.75,209.82,210.88,211.93,212.98,214.02,215.06,216.09,217.12,218.14,219.16,220.17,221.18,222.18,223.18,224.17,225.16,226.15,227.13,228.1,229.07,230.04,231.0,231.96,232.91,233.87,234.81,235.75];
+
+// Ground-roughness scattering floor: below/near the antenna's own 6 m mounting
+// height, elevation angle clamps to ~0 deg, where the idealized flat-ground
+// NEC2 model predicts a near-total destructive-interference null. Real terrain
+// isn't a perfect mirror at grazing incidence, so that null is capped at
+// -15 dB rather than left at its theoretical (and unrealistic) depth -- see
+// GROUND_ROUGHNESS_FLOOR_DB below and the notes section for the rationale.
+// This is why quiet/typical/noisy all go flat for alt <= ~6 m: the model
+// can't resolve elevation angle any finer than "clamped to the floor" there.
+const CURVES={
+  average: {quiet:[4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.512,6.053,7.576,9.084,10.58,12.067,13.544,15.014,16.477,17.934,19.386,20.833,22.275,23.713,25.147,26.577,28.003,29.427,30.847,32.264,33.679,35.091,36.5,37.907,39.311,40.714,42.114,43.512,44.908,46.302,47.694,49.085,50.473,51.86,53.246,54.63,56.012,57.393,58.772,60.15,61.526,62.901,64.275,65.648,67.019,68.192,68.737,69.28,69.82,70.357,70.892,71.424,71.954,72.482,73.008,73.531,74.052,74.571,75.088,75.602,76.115,76.626,77.135,77.641,78.146,78.649,79.151,79.65,80.148,80.644,81.138,81.631,82.122,82.611,83.099,83.585,84.07,84.553,85.035,85.515,85.993,86.471,86.946,87.421,87.894,88.366,88.836,89.305,89.773,90.239,90.704,91.168,91.631,92.092,92.553,93.012,93.47,93.926,94.382,94.836,95.29,95.742,96.193,96.643,97.092,97.54,97.987,98.433,98.878,99.322,99.765,100.207,100.648,101.088,101.527,101.965,102.402,102.838], typical:[0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.909,1.216,1.519,1.819,2.116,2.412,2.706,4.156,5.582,6.993,8.39,9.777,11.156,12.272,12.807,13.33,13.84,14.34,14.831,15.313,15.786,16.252,16.712,17.165,17.612,18.053,18.489,18.92,19.346,19.768,20.186,20.599,21.009,21.415,21.817,22.217,22.559,22.814,23.067,23.319,23.569,23.817,24.063,24.308,24.552,24.794,25.035,25.274,25.512,25.748,25.984,26.218,26.45,26.682,26.913,27.142,27.37,27.597,27.823,28.048,28.272,28.495,28.717,28.939,29.159,29.378,29.596,29.764,29.876,29.989,30.101,30.212,30.324,30.435,30.546,30.656,30.766,30.876,30.985,31.095,31.204,31.312,31.421,31.529,31.637,31.744,31.851,31.959,32.065,32.172,32.278,32.384,32.49,32.595,32.7,32.805,32.91,32.92,32.863,32.805,32.748,32.69,32.633,32.575,32.517,32.459,32.401,32.343,32.284,32.226,32.167,32.109,32.05,31.991,31.932,31.873,30.844,15.759,15.873,15.987,16.1,16.214,16.327,16.441,16.554], noisy:[0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.261,0.565,0.861,1.152,1.439,1.724,2.007,2.288,2.568,3.875,4.397,4.886,5.35,5.794,6.222,6.636,7.039,7.316,7.565,7.809,8.049,8.284,8.516,8.744,8.969,9.191,9.402,9.515,9.626,9.737,9.846,9.955,10.062,10.169,10.275,10.38,10.386,10.328,10.27,10.212,10.154,10.095,4.995,5.109,5.222,5.335,5.448,5.56,5.671,5.782,5.893,6.004,6.114,6.224,6.333,6.442,6.551,6.659,6.767,6.875,6.982,7.09,7.197,7.303,7.394,7.481,7.569,7.656,7.742,7.829,7.915,8.001,8.086,8.171,8.256,8.341,8.425,8.509,8.593,8.677,8.76,8.843,8.926,8.986,9.03,9.073,9.116,9.16,9.202,9.245,9.288,9.33,9.373,9.415,6.06,6.12,6.18,6.241,6.299,6.351,6.403,6.455,6.507,6.559,6.61,6.662,6.713,6.765,6.816,6.867,6.918,6.969,7.02,7.071,7.121,7.172,7.222,7.273,7.323,7.373,7.423,7.472,7.499,7.525,7.551,7.578,7.604]},
+  desert: {quiet:[4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.51,6.052,7.574,9.082,10.577,12.063,13.54,15.009,16.472,17.929,19.38,20.827,22.268,23.706,25.139,26.569,27.995,29.418,30.838,32.255,33.669,35.08,36.489,37.895,39.299,40.701,42.101,43.499,44.894,46.288,47.68,49.07,50.458,51.845,53.23,54.613,55.995,57.375,58.754,60.132,61.508,62.882,64.256,65.628,66.999,67.9,68.44,68.978,69.514,70.046,70.577,71.105,71.63,72.154,72.675,73.193,73.71,74.224,74.737,75.247,75.756,76.262,76.767,77.269,77.77,78.269,78.766,79.261,79.754,80.246,80.736,81.225,81.712,82.197,82.681,83.163,83.643,84.122,84.6,85.076,85.551,86.024,86.496,86.966,87.435,87.903,88.369,88.834,89.298,89.761,90.222,90.682,91.141,91.598,92.055,92.51,92.964,93.417,93.869,94.319,94.769,95.217,95.665,96.111,96.556,97.001,97.444,97.886,98.327,98.767,99.206,99.645,100.082,100.518,100.954,101.388,101.821,102.254], typical:[0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.909,1.216,1.518,1.818,2.116,2.411,2.705,4.154,5.581,6.99,8.387,9.774,11.152,12.219,12.749,13.267,13.774,14.27,14.756,15.234,15.703,16.166,16.621,17.07,17.513,17.951,18.383,18.811,19.233,19.652,20.066,20.476,20.882,21.285,21.684,22.08,22.357,22.608,22.856,23.103,23.348,23.591,23.833,24.074,24.313,24.55,24.786,25.021,25.254,25.486,25.717,25.947,26.175,26.403,26.629,26.854,27.078,27.301,27.523,27.743,27.963,28.182,28.4,28.617,28.833,29.048,29.181,29.288,29.395,29.501,29.606,29.712,29.817,29.922,30.027,30.131,30.235,30.339,30.443,30.546,30.649,30.752,30.854,30.957,31.059,31.16,31.262,31.363,31.464,31.565,31.665,31.766,31.866,31.966,32.048,31.977,31.906,31.835,31.764,31.692,31.62,31.548,31.476,31.404,31.331,31.258,31.186,31.112,31.039,30.966,30.892,30.818,30.241,15.163,15.275,15.388,15.5,15.613,15.725,15.837,15.949,16.06,16.172,16.283,16.395], noisy:[0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.261,0.565,0.86,1.151,1.439,1.724,2.006,2.287,2.567,3.858,4.376,4.861,5.321,5.761,6.185,6.596,6.995,7.249,7.493,7.733,7.968,8.199,8.426,8.65,8.871,9.088,9.252,9.359,9.464,9.568,9.672,9.774,9.876,9.977,10.078,10.108,10.037,9.965,9.892,9.819,9.746,4.836,4.949,5.061,5.172,5.283,5.394,5.504,5.614,5.723,5.832,5.94,6.049,6.156,6.264,6.371,6.478,6.584,6.69,6.796,6.892,6.978,7.064,7.149,7.235,7.32,7.404,7.488,7.572,7.656,7.739,7.822,7.905,7.987,8.07,8.151,8.233,8.305,8.345,8.384,8.424,8.463,8.502,8.541,8.58,8.618,8.657,5.565,5.624,5.682,5.733,5.784,5.834,5.885,5.935,5.986,6.036,6.086,6.136,6.186,6.235,6.285,6.334,6.384,6.433,6.482,6.532,6.581,6.629,6.655,6.678,6.7,6.723,6.745,6.767,6.789,6.811,0.336,0.337,0.338,0.339,0.34,0.341,0.342,0.343,0.344,0.345]},
+  seawater: {quiet:[4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.512,6.055,7.578,9.086,10.583,12.069,13.547,15.017,16.481,17.938,19.39,20.837,22.279,23.718,25.152,26.582,28.009,29.433,30.853,32.271,33.686,35.098,36.507,37.914,39.319,40.722,42.122,43.521,44.917,46.311,47.704,49.095,50.484,51.871,53.256,54.641,56.023,57.404,58.784,60.162,61.539,62.914,64.288,65.661,67.033,68.386,68.935,69.48,70.023,70.563,71.101,71.637,72.17,72.701,73.229,73.755,74.279,74.801,75.321,75.839,76.354,76.868,77.379,77.889,78.397,78.903,79.407,79.909,80.41,80.908,81.406,81.901,82.395,82.887,83.377,83.866,84.354,84.839,85.324,85.806,86.288,86.768,87.246,87.723,88.199,88.673,89.146,89.618,90.088,90.557,91.025,91.492,91.957,92.421,92.884,93.345,93.806,94.265,94.723,95.18,95.636,96.091,96.545,96.997,97.449,97.899,98.349,98.797,99.245,99.691,100.136,100.581,101.024,101.467,101.908,102.349,102.788,103.227], typical:[0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.91,1.216,1.519,1.819,2.117,2.412,2.706,4.157,5.583,6.994,8.392,9.779,11.158,12.307,12.846,13.371,13.884,14.387,14.881,15.365,15.841,16.31,16.772,17.228,17.677,18.121,18.559,18.993,19.421,19.845,20.265,20.681,21.093,21.501,21.906,22.308,22.693,22.951,23.207,23.462,23.715,23.966,24.216,24.464,24.711,24.956,25.199,25.442,25.682,25.922,26.16,26.397,26.633,26.867,27.101,27.333,27.564,27.794,28.023,28.251,28.477,28.703,28.928,29.152,29.375,29.597,29.818,30.038,30.195,30.311,30.427,30.543,30.658,30.773,30.888,31.002,31.116,31.23,31.343,31.457,31.569,31.682,31.794,31.906,32.018,32.129,32.24,32.351,32.462,32.572,32.682,32.792,32.901,33.01,33.119,33.228,33.336,33.444,33.552,33.522,33.471,33.42,33.369,33.318,33.267,33.216,33.165,33.114,33.063,33.011,32.96,32.908,32.856,32.805,32.753,32.701,32.649,32.597,32.544,16.123,16.238,16.353,16.467,16.581,16.695], noisy:[0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.261,0.565,0.861,1.152,1.439,1.724,2.007,2.288,2.568,3.886,4.412,4.903,5.37,5.816,6.246,6.663,7.067,7.36,7.613,7.86,8.103,8.341,8.576,8.807,9.034,9.258,9.48,9.618,9.733,9.847,9.961,10.073,10.185,10.295,10.405,10.514,10.611,10.56,10.509,10.458,10.406,10.355,10.303,5.153,5.267,5.381,5.494,5.607,5.72,5.832,5.944,6.055,6.166,6.277,6.387,6.497,6.607,6.716,6.825,6.934,7.042,7.15,7.258,7.366,7.473,7.58,7.687,7.775,7.864,7.951,8.039,8.126,8.213,8.299,8.386,8.472,8.558,8.643,8.728,8.813,8.898,8.982,9.067,9.151,9.234,9.318,9.401,9.468,9.513,9.557,9.602,9.646,9.69,9.734,9.778,9.822,9.866,9.909,9.952,6.429,6.489,6.55,6.611,6.671,6.732,6.792,6.852,6.905,6.957,7.009,7.061,7.113,7.165,7.217,7.269,7.32,7.372,7.423,7.475,7.526,7.577,7.628,7.679,7.73,7.781,7.831,7.882]},
+  forest: {quiet:[4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.512,6.053,7.576,9.084,10.58,12.067,13.544,15.014,16.477,17.934,19.386,20.833,22.275,23.713,25.147,26.577,28.003,29.427,30.847,32.264,33.679,35.091,36.5,37.907,39.311,40.714,42.114,43.512,44.908,46.302,47.694,49.085,50.473,51.86,53.246,54.63,56.012,57.393,58.772,60.15,61.526,62.901,64.275,65.648,67.019,68.192,68.737,69.28,69.82,70.357,70.892,71.424,71.954,72.482,73.008,73.531,74.052,74.571,75.088,75.602,76.115,76.626,77.135,77.641,78.146,78.649,79.151,79.65,80.148,80.644,81.138,81.631,82.122,82.611,83.099,83.585,84.07,84.553,85.035,85.515,85.993,86.471,86.946,87.421,87.894,88.366,88.836,89.305,89.773,90.239,90.704,91.168,91.631,92.092,92.553,93.012,93.47,93.926,94.382,94.836,95.29,95.742,96.193,96.643,97.092,97.54,97.987,98.433,98.878,99.322,99.765,100.207,100.648,101.088,101.527,101.965,102.402,102.838], typical:[0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.909,1.216,1.519,1.819,2.116,2.412,2.706,4.156,5.582,6.993,8.39,9.777,11.156,12.272,12.807,13.33,13.84,14.34,14.831,15.313,15.786,16.252,16.712,17.165,17.612,18.053,18.489,18.92,19.346,19.768,20.186,20.599,21.009,21.415,21.817,22.217,22.559,22.814,23.067,23.319,23.569,23.817,24.063,24.308,24.552,24.794,25.035,25.274,25.512,25.748,25.984,26.218,26.45,26.682,26.913,27.142,27.37,27.597,27.823,28.048,28.272,28.495,28.717,28.939,29.159,29.378,29.596,29.764,29.876,29.989,30.101,30.212,30.324,30.435,30.546,30.656,30.766,30.876,30.985,31.095,31.204,31.312,31.421,31.529,31.637,31.744,31.851,31.959,32.065,32.172,32.278,32.384,32.49,32.595,32.7,32.805,32.91,32.92,32.863,32.805,32.748,32.69,32.633,32.575,32.517,32.459,32.401,32.343,32.284,32.226,32.167,32.109,32.05,31.991,31.932,31.873,30.844,15.759,15.873,15.987,16.1,16.214,16.327,16.441,16.554], noisy:[0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.261,0.565,0.861,1.152,1.439,1.724,2.007,2.288,2.568,3.875,4.397,4.886,5.35,5.794,6.222,6.636,7.039,7.316,7.565,7.809,8.049,8.284,8.516,8.744,8.969,9.191,9.402,9.515,9.626,9.737,9.846,9.955,10.062,10.169,10.275,10.38,10.386,10.328,10.27,10.212,10.154,10.095,4.995,5.109,5.222,5.335,5.448,5.56,5.671,5.782,5.893,6.004,6.114,6.224,6.333,6.442,6.551,6.659,6.767,6.875,6.982,7.09,7.197,7.303,7.394,7.481,7.569,7.656,7.742,7.829,7.915,8.001,8.086,8.171,8.256,8.341,8.425,8.509,8.593,8.677,8.76,8.843,8.926,8.986,9.03,9.073,9.116,9.16,9.202,9.245,9.288,9.33,9.373,9.415,6.06,6.121,6.181,6.241,6.301,6.353,6.405,6.456,6.508,6.56,6.612,6.663,6.714,6.766,6.817,6.868,6.919,6.97,7.02,7.071,7.122,7.172,7.223,7.273,7.323,7.373,7.423,7.472,7.499,7.525,7.551,7.578,7.604]},
+  freshwater: {quiet:[4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.512,6.054,7.577,9.085,10.581,12.068,13.545,15.015,16.479,17.936,19.388,20.835,22.277,23.715,25.149,26.579,28.006,29.43,30.85,32.268,33.682,35.094,36.504,37.911,39.315,40.718,42.118,43.516,44.912,46.307,47.699,49.09,50.478,51.866,53.251,54.635,56.017,57.398,58.778,60.156,61.532,62.908,64.282,65.654,67.026,68.289,68.837,69.381,69.923,70.463,71.0,71.534,72.067,72.596,73.124,73.649,74.172,74.693,75.212,75.729,76.244,76.756,77.267,77.776,78.283,78.788,79.291,79.793,80.292,80.79,81.287,81.781,82.274,82.765,83.255,83.743,84.23,84.715,85.198,85.68,86.161,86.64,87.118,87.594,88.069,88.542,89.014,89.485,89.955,90.423,90.89,91.356,91.82,92.284,92.746,93.207,93.666,94.125,94.582,95.038,95.494,95.948,96.4,96.852,97.303,97.753,98.202,98.649,99.096,99.541,99.986,100.43,100.872,101.314,101.755,102.195,102.633,103.071], typical:[0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.91,1.216,1.519,1.819,2.116,2.412,2.706,4.156,5.583,6.993,8.391,9.778,11.157,12.29,12.827,13.352,13.864,14.366,14.859,15.342,15.818,16.286,16.747,17.202,17.65,18.093,18.531,18.964,19.392,19.815,20.234,20.65,21.061,21.469,21.873,22.274,22.643,22.9,23.156,23.409,23.662,23.912,24.161,24.408,24.654,24.898,25.141,25.382,25.622,25.861,26.099,26.335,26.57,26.803,27.036,27.267,27.498,27.727,27.955,28.182,28.408,28.633,28.857,29.08,29.302,29.524,29.744,29.963,30.089,30.204,30.319,30.434,30.548,30.662,30.776,30.889,31.003,31.115,31.228,31.34,31.452,31.563,31.675,31.786,31.896,32.007,32.117,32.227,32.336,32.445,32.554,32.663,32.772,32.88,32.988,33.096,33.203,33.31,33.352,33.299,33.246,33.193,33.14,33.087,33.033,32.98,32.927,32.873,32.819,32.766,32.712,32.658,32.604,32.55,32.496,32.441,32.387,32.332,30.388,16.06,16.174,16.289,16.403,16.517,16.631], noisy:[0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.261,0.565,0.861,1.152,1.439,1.724,2.007,2.288,2.568,3.881,4.405,4.896,5.362,5.807,6.237,6.652,7.057,7.344,7.595,7.842,8.084,8.321,8.555,8.785,9.012,9.236,9.456,9.584,9.698,9.811,9.924,10.035,10.146,10.255,10.364,10.472,10.541,10.488,10.435,10.381,10.327,10.273,10.219,5.132,5.246,5.36,5.473,5.586,5.698,5.81,5.922,6.033,6.144,6.254,6.364,6.474,6.583,6.692,6.801,6.91,7.018,7.126,7.233,7.341,7.448,7.552,7.64,7.728,7.816,7.904,7.991,8.077,8.164,8.25,8.336,8.422,8.507,8.592,8.677,8.762,8.846,8.93,9.014,9.098,9.181,9.264,9.311,9.357,9.403,9.448,9.494,9.539,9.584,9.629,9.674,9.718,9.763,6.28,6.34,6.401,6.462,6.522,6.583,6.64,6.693,6.745,6.798,6.85,6.902,6.954,7.006,7.058,7.11,7.161,7.213,7.265,7.316,7.367,7.419,7.47,7.521,7.572,7.623,7.673,7.724,7.775,7.825]},
+  grassland: {quiet:[4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.045,4.512,6.053,7.576,9.084,10.58,12.067,13.544,15.014,16.477,17.934,19.386,20.833,22.275,23.713,25.147,26.577,28.003,29.427,30.847,32.264,33.679,35.091,36.5,37.907,39.311,40.714,42.114,43.512,44.908,46.302,47.694,49.085,50.473,51.86,53.246,54.63,56.012,57.393,58.772,60.15,61.526,62.901,64.275,65.648,67.019,68.192,68.737,69.28,69.82,70.357,70.892,71.424,71.954,72.482,73.008,73.531,74.052,74.571,75.088,75.602,76.115,76.626,77.135,77.641,78.146,78.649,79.151,79.65,80.148,80.644,81.138,81.631,82.122,82.611,83.099,83.585,84.07,84.553,85.035,85.515,85.993,86.471,86.946,87.421,87.894,88.366,88.836,89.305,89.773,90.239,90.704,91.168,91.631,92.092,92.553,93.012,93.47,93.926,94.382,94.836,95.29,95.742,96.193,96.643,97.092,97.54,97.987,98.433,98.878,99.322,99.765,100.207,100.648,101.088,101.527,101.965,102.402,102.838], typical:[0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.719,0.909,1.216,1.519,1.819,2.116,2.412,2.706,4.156,5.582,6.993,8.39,9.777,11.156,12.272,12.807,13.33,13.84,14.34,14.831,15.313,15.786,16.252,16.712,17.165,17.612,18.053,18.489,18.92,19.346,19.768,20.186,20.599,21.009,21.415,21.817,22.217,22.559,22.815,23.069,23.321,23.571,23.82,24.067,24.313,24.557,24.8,25.041,25.281,25.52,25.757,25.993,26.227,26.461,26.693,26.924,27.154,27.383,27.61,27.837,28.063,28.287,28.511,28.734,28.955,29.176,29.396,29.615,29.79,29.903,30.015,30.127,30.239,30.35,30.461,30.572,30.682,30.792,30.902,31.012,31.121,31.23,31.339,31.447,31.555,31.663,31.771,31.878,31.985,32.092,32.198,32.305,32.411,32.516,32.622,32.727,32.832,32.937,32.964,32.907,32.849,32.792,32.734,32.677,32.619,32.561,32.503,32.445,32.387,32.329,32.27,32.212,32.153,32.094,32.035,31.976,31.917,31.235,15.768,15.882,15.996,16.11,16.224,16.337,16.45,16.563], noisy:[0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.227,0.261,0.565,0.861,1.152,1.439,1.724,2.007,2.288,2.568,3.875,4.397,4.886,5.35,5.794,6.222,6.636,7.039,7.316,7.566,7.811,8.051,8.288,8.52,8.748,8.974,9.196,9.411,9.523,9.634,9.745,9.854,9.963,10.071,10.177,10.283,10.389,10.4,10.342,10.284,10.226,10.168,10.109,4.998,5.112,5.225,5.338,5.451,5.563,5.674,5.785,5.896,6.007,6.117,6.227,6.336,6.445,6.554,6.662,6.77,6.878,6.985,7.093,7.2,7.306,7.399,7.487,7.574,7.661,7.748,7.834,7.92,8.006,8.092,8.177,8.262,8.347,8.431,8.515,8.599,8.683,8.766,8.849,8.932,8.999,9.043,9.086,9.13,9.173,9.216,9.258,9.301,9.344,9.386,9.428,6.064,6.124,6.185,6.245,6.305,6.36,6.412,6.464,6.515,6.567,6.619,6.67,6.722,6.773,6.824,6.875,6.926,6.977,7.028,7.079,7.129,7.18,7.23,7.281,7.331,7.381,7.431,7.481,7.519,7.545,7.571,7.596,7.622]},
+};
+
+// 1-degree elevation gain curves (elev 0-90 deg), boresight cut, NEC2-derived, per ground type
+const GAINS={
+  average: [-180.92,9.52,14.89,17.32,18.22,17.92,16.36,12.97,5.19,0.72,11.26,15.15,16.91,17.35,16.66,14.7,10.81,1.97,2.66,10.51,13.83,15.33,15.64,14.92,13.1,9.74,3.32,-2.29,6.05,9.94,11.78,12.41,12.11,10.95,8.82,5.38,-0.29,-5.92,-0.42,3.21,4.89,5.42,5.1,4.07,2.36,-0.07,-3.33,-7.68,-13.19,-14.93,-10.82,-7.25,-4.53,-2.44,-0.87,0.22,0.87,1.1,0.91,0.28,-0.81,-2.43,-4.62,-7.26,-9.22,-8.57,-6.45,-4.52,-3.11,-2.19,-1.66,-1.46,-1.55,-1.89,-2.47,-3.25,-4.24,-5.39,-6.68,-8.0,-9.19,-10.03,-10.31,-10.07,-9.51,-8.82,-8.14,-7.53,-7.0,-6.57,-6.23],
+  desert: [-180.92,9.46,14.77,17.14,17.98,17.62,16.01,12.62,5.31,1.96,10.86,14.57,16.24,16.62,15.91,13.98,10.35,4.06,4.45,10.0,12.94,14.3,14.54,13.83,12.11,9.17,4.87,2.85,6.24,9.06,10.56,11.05,10.72,9.62,7.73,4.98,1.62,-0.33,0.88,2.66,3.7,3.95,3.52,2.48,0.87,-1.29,-3.94,-6.86,-9.36,-10.22,-9.21,-7.39,-5.5,-3.82,-2.47,-1.47,-0.84,-0.56,-0.61,-0.96,-1.58,-2.4,-3.31,-4.08,-4.5,-4.46,-4.09,-3.59,-3.15,-2.86,-2.75,-2.84,-3.13,-3.62,-4.29,-5.15,-6.19,-7.38,-8.69,-10.01,-11.16,-11.89,-12.04,-11.67,-11.0,-10.24,-9.51,-8.86,-8.32,-7.87,-7.52],
+  seawater: [-180.91,9.56,14.97,17.44,18.38,18.11,16.57,13.19,5.25,0.81,11.66,15.58,17.37,17.83,17.16,15.2,11.22,1.28,2.74,11.19,14.58,16.1,16.42,15.71,13.86,10.35,2.98,-6.06,6.81,10.94,12.83,13.47,13.18,11.99,9.79,6.09,-0.89,-16.26,0.1,4.36,6.18,6.75,6.44,5.4,3.64,1.11,-2.4,-7.5,-17.04,-20.21,-10.44,-6.06,-3.11,-0.93,0.68,1.79,2.43,2.63,2.37,1.64,0.34,-1.68,-4.82,-10.25,-24.63,-12.77,-6.73,-3.62,-1.74,-0.58,0.08,0.35,0.32,0.01,-0.53,-1.29,-2.25,-3.39,-4.67,-6.0,-7.24,-8.17,-8.59,-8.49,-8.02,-7.39,-6.74,-6.15,-5.64,-5.21,-4.86],
+  forest: [-180.92,9.52,14.89,17.32,18.22,17.92,16.36,12.97,5.18,0.73,11.26,15.15,16.91,17.35,16.66,14.7,10.8,1.96,2.67,10.51,13.84,15.33,15.64,14.92,13.1,9.73,3.31,-2.27,6.06,9.95,11.78,12.41,12.11,10.95,8.82,5.37,-0.3,-5.92,-0.4,3.22,4.9,5.42,5.1,4.07,2.36,-0.07,-3.34,-7.69,-13.21,-14.92,-10.81,-7.24,-4.52,-2.43,-0.87,0.22,0.87,1.1,0.9,0.27,-0.82,-2.44,-4.64,-7.28,-9.22,-8.56,-6.43,-4.5,-3.1,-2.18,-1.65,-1.45,-1.55,-1.89,-2.46,-3.25,-4.24,-5.39,-6.68,-8.0,-9.2,-10.03,-10.32,-10.08,-9.51,-8.82,-8.14,-7.53,-7.01,-6.58,-6.23],
+  freshwater: [-180.93,9.54,14.94,17.4,18.33,18.05,16.51,13.15,5.31,0.49,11.47,15.41,17.2,17.68,17.01,15.08,11.16,1.65,2.28,10.85,14.28,15.83,16.16,15.47,13.66,10.24,3.23,-6.15,6.3,10.5,12.43,13.1,12.83,11.69,9.54,5.96,-0.54,-12.74,-0.57,3.77,5.64,6.25,5.98,4.97,3.26,0.8,-2.6,-7.42,-15.45,-19.74,-11.2,-6.76,-3.77,-1.54,0.1,1.23,1.91,2.14,1.93,1.26,0.05,-1.81,-4.62,-8.99,-15.37,-12.71,-7.56,-4.49,-2.59,-1.4,-0.72,-0.42,-0.44,-0.73,-1.26,-2.01,-2.96,-4.09,-5.35,-6.66,-7.86,-8.74,-9.1,-8.94,-8.43,-7.78,-7.12,-6.53,-6.01,-5.58,-5.24],
+  grassland: [-180.92,9.52,14.89,17.33,18.23,17.93,16.36,12.97,5.16,0.74,11.29,15.17,16.93,17.37,16.68,14.72,10.81,1.87,2.68,10.55,13.88,15.37,15.67,14.95,13.13,9.74,3.23,-2.44,6.1,10.0,11.83,12.46,12.15,10.99,8.85,5.37,-0.4,-6.19,-0.38,3.27,4.96,5.48,5.16,4.12,2.4,-0.04,-3.33,-7.74,-13.43,-15.11,-10.8,-7.18,-4.46,-2.36,-0.8,0.29,0.94,1.15,0.95,0.31,-0.81,-2.46,-4.72,-7.47,-9.5,-8.72,-6.46,-4.47,-3.04,-2.1,-1.57,-1.38,-1.47,-1.81,-2.38,-3.17,-4.16,-5.32,-6.6,-7.93,-9.13,-9.97,-10.26,-10.03,-9.47,-8.78,-8.1,-7.5,-6.97,-6.54,-6.2],
+};
+
+const TERRAINS=['average','desert','seawater','forest','freshwater','grassland'];
+const TERRAIN_META={
+  average:   {label:'Average ground', ground:'average ground', dash:''},
+  desert:    {label:'Desert',         ground:'desert ground',  dash:'3,3'},
+  seawater:  {label:'Seawater',       ground:'seawater',       dash:'9,4'},
+  forest:    {label:'Forest',         ground:'forest ground',  dash:'1,3'},
+  freshwater:{label:'Freshwater',     ground:'freshwater',     dash:'9,3,2,3'},
+  grassland: {label:'Grassland',      ground:'grassland',      dash:'2,2'},
+};
+
+const F_MHZ = 166.380;
+const PTX_DBM = -10.0;
+const GTAG_DBI = -6.0;
+const ANT_HEIGHT_M = 6.0;
+// Ground-roughness scattering floor: real terrain isn't a perfect mirror at
+// grazing incidence, so the idealized flat-ground null near elev=0 (i.e. near
+// the ground, close to the antenna's own height) is capped rather than left
+// at its unrealistic theoretical depth. See notes below for the full rationale.
+const GROUND_ROUGHNESS_FLOOR_DB = -15.0;
+
+let selectedTerrain = 'average';
+let compareAll = false;
+
+function gainAt(terrain, elevDeg) {
+  const arr = GAINS[terrain];
+  const e = Math.max(0, Math.min(90, elevDeg));
+  const i0 = Math.floor(e), i1 = Math.min(90, i0+1);
+  const t = e - i0;
+  return arr[i0] + t*(arr[i1]-arr[i0]);
+}
+function fsplDb(dKm) {
+  const d = Math.max(dKm, 0.02);
+  return 20*Math.log10(d) + 20*Math.log10(F_MHZ) + 32.44;
+}
+function elevationDeg(altM, dKm) {
+  const dM = dKm*1000.0;
+  if (dM <= 0) return 90.0;
+  return Math.atan2(altM - ANT_HEIGHT_M, dM) * 180/Math.PI;
+}
+function rxPowerDbm(terrain, altM, dKm) {
+  const elev = elevationDeg(altM, dKm);
+  const grx = Math.max(gainAt(terrain, elev), GROUND_ROUGHNESS_FLOOR_DB);
+  return PTX_DBM + GTAG_DBI - fsplDb(dKm) + grx;
+}
+
+const ns = 'http://www.w3.org/2000/svg';
+function el(tag, attrs) {
+  const e = document.createElementNS(ns, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function pathFor(xScale, yScale, xs, ys, clampMax) {
+  let d = '';
+  for (let i=0;i<xs.length;i++) {
+    const x = Math.min(xs[i], clampMax);
+    const px = xScale(x), py = yScale(ys[i]);
+    d += (i===0 ? 'M' : 'L') + px.toFixed(2) + ' ' + py.toFixed(2) + ' ';
+  }
+  return d.trim();
+}
+
+function renderChart() {
+  const svg = document.getElementById('chart');
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const W = 860, H = 480;
+  const M = {top: 16, right: 24, bottom: 48, left: 64};
+  const plotW = W - M.left - M.right;
+  const plotH = H - M.top - M.bottom;
+  const xMax = 130, yMax = 3000;
+  const xScale = km => M.left + (km/xMax)*plotW;
+  const yScale = alt => M.top + plotH - (alt/yMax)*plotH;
+
+  for (let km=0; km<=xMax; km+=20) {
+    svg.appendChild(el('line', {class:'gridline', x1:xScale(km), y1:M.top, x2:xScale(km), y2:M.top+plotH}));
+    const t = el('text', {class:'tick-label', x:xScale(km), y:M.top+plotH+18, 'text-anchor':'middle'});
+    t.textContent = km;
+    svg.appendChild(t);
+  }
+  for (let alt=0; alt<=yMax; alt+=500) {
+    svg.appendChild(el('line', {class:'gridline', x1:M.left, y1:yScale(alt), x2:M.left+plotW, y2:yScale(alt)}));
+    const t = el('text', {class:'tick-label', x:M.left-10, y:yScale(alt)+4, 'text-anchor':'end'});
+    t.textContent = alt;
+    svg.appendChild(t);
+  }
+  svg.appendChild(el('line', {class:'axis-line', x1:M.left, y1:M.top, x2:M.left, y2:M.top+plotH}));
+  svg.appendChild(el('line', {class:'axis-line', x1:M.left, y1:M.top+plotH, x2:M.left+plotW, y2:M.top+plotH}));
+
+  const xLabel = el('text', {class:'axis-label', x:M.left+plotW/2, y:H-8, 'text-anchor':'middle'});
+  xLabel.textContent = 'Horizontal distance from tower (km)';
+  svg.appendChild(xLabel);
+  const yLabel = el('text', {class:'axis-label', x:0, y:0, 'text-anchor':'middle', transform:`translate(16 ${M.top+plotH/2}) rotate(-90)`});
+  yLabel.textContent = 'Tag altitude AGL (m)';
+  svg.appendChild(yLabel);
+
+  svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,HOR, ALTS, xMax), stroke:'var(--c-horizon)', 'stroke-dasharray':'4 5'}));
+
+  if (!compareAll) {
+    const c = CURVES[selectedTerrain];
+    svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,c.noisy, ALTS, xMax), stroke:'var(--c-noisy)'}));
+    svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,c.typical, ALTS, xMax), stroke:'var(--c-typical)'}));
+    svg.appendChild(el('path', {class:'curve', d: pathFor(xScale,yScale,c.quiet, ALTS, xMax), stroke:'var(--c-quiet)'}));
+  } else {
+    ['noisy','typical','quiet'].forEach(scn => {
+      const color = scn==='noisy' ? 'var(--c-noisy)' : (scn==='typical' ? 'var(--c-typical)' : 'var(--c-quiet)');
+      TERRAINS.forEach(terr => {
+        const meta = TERRAIN_META[terr];
+        const isSel = terr === selectedTerrain;
+        const p = el('path', {
+          class:'curve',
+          d: pathFor(xScale,yScale,CURVES[terr][scn], ALTS, xMax),
+          stroke: color,
+          opacity: isSel ? '1' : '0.5',
+          'stroke-width': isSel ? '2.8' : '1.5',
+        });
+        if (meta.dash) p.setAttribute('stroke-dasharray', meta.dash);
+        svg.appendChild(p);
+      });
+    });
+  }
+
+  const refX = xScale(15);
+  svg.appendChild(el('line', {class:'ref-line', x1:refX, y1:M.top, x2:refX, y2:M.top+plotH}));
+  const refLabel = el('text', {class:'ref-label', x:refX+6, y:M.top+14});
+  refLabel.textContent = '~15 km';
+  svg.appendChild(refLabel);
+
+  document.getElementById('terrain-legend').hidden = !compareAll;
+  document.getElementById('chart-mode-note').innerHTML = compareAll
+    ? `Comparing all six ground types — colour marks the noise scenario, line style marks the terrain. <b>${TERRAIN_META[selectedTerrain].label}</b> is bolded; pick a different terrain button to bold that one instead.`
+    : `Showing <b>${TERRAIN_META[selectedTerrain].label}</b>.`;
+}
+
+function renderTerrainLegend() {
+  const wrap = document.getElementById('terrain-legend');
+  wrap.innerHTML = '';
+  TERRAINS.forEach(terr => {
+    const meta = TERRAIN_META[terr];
+    const item = document.createElement('span');
+    item.className = 'tlegend-item' + (terr===selectedTerrain ? ' active' : '');
+    const s = document.createElementNS(ns, 'svg');
+    s.setAttribute('width', '22'); s.setAttribute('height', '8'); s.setAttribute('viewBox', '0 0 22 8');
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1','0'); ln.setAttribute('y1','4'); ln.setAttribute('x2','22'); ln.setAttribute('y2','4');
+    ln.setAttribute('stroke', 'var(--ink-dim)'); ln.setAttribute('stroke-width','2');
+    if (meta.dash) ln.setAttribute('stroke-dasharray', meta.dash);
+    s.appendChild(ln);
+    item.appendChild(s);
+    const txt = document.createElement('span');
+    txt.textContent = meta.label;
+    item.appendChild(txt);
+    wrap.appendChild(item);
+  });
+}
+
+// Banded so a sharp colour jump lands exactly on each station-sensitivity
+// threshold (quiet -120, typical -105, noisy -95 dBm), with a subtler
+// gradient inside each band for fine detail. Two stops a hair apart at each
+// threshold (e.g. -120.01 / -120) create the hard edge.
+// A few dB of blend width around each station threshold, instead of an
+// instant snap, so bands still read as distinct without a hard edge.
+const STOPS = [
+  [-140,  30, 34, 36],
+  [-123,  32, 46, 52],
+  [-120,  36, 84, 99],
+  [-108,  52,100,112],
+  [-105, 130,108, 54],
+  [-98,  142,116, 58],
+  [-95,  150, 80, 47],
+  [-70,  172, 98, 62],
+];
+function colorFor(dbm) {
+  if (dbm <= STOPS[0][0]) return STOPS[0].slice(1);
+  if (dbm >= STOPS[STOPS.length-1][0]) return STOPS[STOPS.length-1].slice(1);
+  for (let i=0;i<STOPS.length-1;i++) {
+    const [d0,r0,g0,b0] = STOPS[i], [d1,r1,g1,b1] = STOPS[i+1];
+    if (dbm >= d0 && dbm <= d1) {
+      const t = (dbm-d0)/(d1-d0);
+      return [r0+t*(r1-r0), g0+t*(g1-g0), b0+t*(b1-b0)];
+    }
+  }
+  return STOPS[STOPS.length-1].slice(1);
+}
+
+function renderHeatmap(canvasId, xMaxKm, yMaxM) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = 860, H = 480;
+  const M = {top: 16, right: 24, bottom: 48, left: 64};
+  const plotW = W - M.left - M.right;
+  const plotH = H - M.top - M.bottom;
+  const xScale = km => M.left + (km/xMaxKm)*plotW;
+  const yScale = alt => M.top + plotH - (alt/yMaxM)*plotH;
+
+  ctx.fillStyle = '#1e2224';
+  ctx.fillRect(0,0,W,H);
+
+  const block = 4;
+  for (let py=M.top; py<M.top+plotH; py+=block) {
+    const alt = yMaxM*(1 - (py-M.top)/plotH);
+    for (let px=M.left; px<M.left+plotW; px+=block) {
+      const km = (px-M.left)/plotW*xMaxKm;
+      const dbm = rxPowerDbm(selectedTerrain, alt, km);
+      const [r,g,b] = colorFor(dbm);
+      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+      ctx.fillRect(px,py,block,block);
+    }
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(M.left, M.top, plotW, plotH);
+  ctx.clip();
+
+  function strokePath(xs, ys, color, dash) {
+    ctx.beginPath();
+    ctx.setLineDash(dash || []);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    let started = false;
+    for (let i=0;i<xs.length;i++) {
+      const px = xScale(xs[i]), py = yScale(ys[i]);
+      if (!started) { ctx.moveTo(px,py); started = true; }
+      else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  const c = CURVES[selectedTerrain];
+  strokePath(HOR, ALTS, '#c9c4b6', [4,5]);
+  strokePath(c.noisy, ALTS, '#e6af5a', [3,3]);
+  strokePath(c.typical, ALTS, '#d7b862', [3,3]);
+  strokePath(c.quiet, ALTS, '#7fc4d8', [3,3]);
+
+  const showRef = xMaxKm >= 15;
+  let refX = null;
+  if (showRef) {
+    refX = xScale(15);
+    ctx.beginPath();
+    ctx.setLineDash([3,5]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 1.4;
+    ctx.moveTo(refX, M.top);
+    ctx.lineTo(refX, M.top+plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+
+  if (showRef) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.fillText('~15 km', refX+6, M.top+14);
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(M.left, M.top); ctx.lineTo(M.left, M.top+plotH); ctx.lineTo(M.left+plotW, M.top+plotH);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+  ctx.textAlign = 'center';
+  const xStep = xMaxKm <= 1 ? 0.1 : (xMaxKm <= 30 ? 5 : 20);
+  for (let km=0; km<=xMaxKm+1e-9; km+=xStep) {
+    ctx.fillText(xMaxKm <= 1 ? km.toFixed(1) : Math.round(km), xScale(km), M.top+plotH+18);
+  }
+  ctx.textAlign = 'right';
+  const yStep = yMaxM <= 300 ? 25 : (yMaxM <= 1500 ? 250 : 500);
+  for (let alt=0; alt<=yMaxM+1e-9; alt+=yStep) {
+    ctx.fillText(alt, M.left-10, yScale(alt)+4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.font = '12px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.fillText('Horizontal distance from tower (km)', M.left+plotW/2, H-8);
+  ctx.save();
+  ctx.translate(16, M.top+plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('Tag altitude AGL (m)', 0, 0);
+  ctx.restore();
+}
+
+function firstCross(arr, thresh) {
+  for (let i=0;i<arr.length;i++) { if (arr[i] >= thresh) return ALTS[i]; }
+  return null;
+}
+
+function renderTable() {
+  const c = CURVES[selectedTerrain];
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = '';
+  const rows = [0,1,3,6,10,20,30,50,100,300,600,1000,1500,2000,3000];
+  rows.forEach(alt => {
+    const i = ALTS.reduce((best,v,idx)=> Math.abs(v-alt)<Math.abs(ALTS[best]-alt)?idx:best, 0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${ALTS[i]} m</td><td>${c.quiet[i].toFixed(1)} km</td><td>${c.typical[i].toFixed(1)} km</td><td>${c.noisy[i].toFixed(1)} km</td><td>${HOR[i].toFixed(1)} km</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const qAlt = firstCross(c.quiet, 15);
+  const tAlt = firstCross(c.typical, 15);
+  const maxNoisy = Math.max(...c.noisy);
+  const label = TERRAIN_META[selectedTerrain].label.toLowerCase();
+  let note = `Crossing ~15 km (${label}): `;
+  note += qAlt!=null ? `quiet station first reaches it at ~${qAlt} m AGL, ` : `quiet station never reaches it (tops out ~${Math.max(...c.quiet).toFixed(1)} km), `;
+  note += tAlt!=null ? `typical at ~${tAlt} m AGL; ` : `typical never reaches it (tops out ~${Math.max(...c.typical).toFixed(1)} km); `;
+  note += maxNoisy >= 15 ? `noisy stations do reach it, topping out around ${maxNoisy.toFixed(1)} km.` : `noisy stations never quite reach it, topping out around ${maxNoisy.toFixed(1)} km.`;
+  document.getElementById('tbl-note').textContent = note;
+}
+
+function updateAll() {
+  document.getElementById('terrain-inline').textContent = TERRAIN_META[selectedTerrain].ground;
+  renderChart();
+  renderTerrainLegend();
+  renderHeatmap('heatmap-mid', 30, 1500);
+  renderHeatmap('heatmap-near', 1, 200);
+  renderTable();
+}
+
+document.querySelectorAll('.terrain-btn[data-terrain]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedTerrain = btn.dataset.terrain;
+    document.querySelectorAll('.terrain-btn[data-terrain]').forEach(b => b.classList.toggle('active', b===btn));
+    updateAll();
+  });
+});
+document.getElementById('compare-btn').addEventListener('click', () => {
+  compareAll = !compareAll;
+  document.getElementById('compare-btn').classList.toggle('active', compareAll);
+  updateAll();
+});
+
+updateAll();
+</script>
