@@ -572,6 +572,10 @@
     <div class="hud">
       <section class="panel" aria-label="Antennas">
         <div class="panel-title">Antennas</div>
+        <div class="ctrl-row slider-row">
+          <label id="freqGuardLabel">Frequency</label>
+          <div class="seg-group" id="freqGuardGroup" role="group" aria-labelledby="freqGuardLabel"></div>
+        </div>
         <div class="antenna-chips" id="antennaChips" role="tablist" aria-label="Antenna instances"></div>
         <div class="ctrl-row">
           <button type="button" class="seg-btn" id="addAntennaBtn">+ Add antenna</button>
@@ -612,6 +616,16 @@
             </span>
           </div>
           <input type="range" id="instHeadingSlider" min="0" max="359" step="1" value="0" aria-labelledby="instHeadingLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="instTiltLabel" for="instTiltSlider">Downtilt</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="instTiltValue" value="0" aria-label="Downtilt in degrees, negative for uptilt">
+              <span class="range-value-unit">&deg;</span>
+            </span>
+          </div>
+          <input type="range" id="instTiltSlider" min="-30" max="30" step="1" value="0" aria-labelledby="instTiltLabel">
         </div>
         <div class="ctrl-row slider-row">
           <label id="instMountLabel">Mount</label>
@@ -939,17 +953,23 @@
     return 20*Math.log10(Math.max(mag, 1e-6));
   }
 
-  // builds a full elevation/phi gain grid from a free-space baseline pattern
-  // plus the live reflection factor (elevation-only - the two-ray model
-  // assumes a uniform infinite ground plane, so it doesn't vary with phi)
-  function computeLiveGrid(baseline, ground, heightM, freqMhz, pol){
-    var elevs = baseline.elevDeg, base = baseline.gainDb;
-    var nTb = elevs.length, nPb = baseline.phiDeg.length;
+  // builds a full elevation/phi gain grid from an antenna gain pattern
+  // (already tilted, if applicable - see instanceNativeGrid()) plus the live
+  // reflection factor (elevation-only - the two-ray model assumes a uniform
+  // infinite ground plane, so it doesn't vary with phi). `elevDeg` here is
+  // always TRUE/physical elevation above the ground plane, regardless of how
+  // the antenna itself is mechanically oriented: groundReflectionDb() is a
+  // purely geometric function of the real grazing angle and antenna height,
+  // not of the antenna's own boresight direction, so it must be evaluated at
+  // the same physical elevDeg the caller is asking for - never resampled
+  // through a tilt transform the way the intrinsic gain pattern is.
+  function computeLiveGrid(elevDeg, phiDeg, gainGrid, ground, heightM, freqMhz, pol){
+    var nTb = elevDeg.length, nPb = phiDeg.length;
     var out = new Array(nTb);
     for (var ti=0; ti<nTb; ti++){
-      var rdb = groundReflectionDb(elevs[ti], heightM, freqMhz, ground, pol);
+      var rdb = groundReflectionDb(elevDeg[ti], heightM, freqMhz, ground, pol);
       var row = new Array(nPb);
-      for (var pi=0; pi<nPb; pi++) row[pi] = base[ti][pi] + rdb;
+      for (var pi=0; pi<nPb; pi++) row[pi] = gainGrid[ti][pi] + rdb;
       out[ti] = row;
     }
     return out;
@@ -963,6 +983,71 @@
   function isLiveModeFor(dataset){ return !!(dataset && dataset.freeSpace); }
   function isLiveMode(){ return isLiveModeFor(activeAntenna() && activeAntenna().data); }
 
+  // mechanical downtilt/uptilt: resamples a native elevDeg x phiDeg gain grid
+  // as though the whole antenna (and its radiated pattern) were physically
+  // pitched by tiltDeg about the horizontal axis perpendicular to boresight
+  // (positive = boresight tips toward the ground). Output stays indexed on
+  // the SAME elevDeg/phiDeg axes as the input - every caller already treats
+  // instanceNativeGrid()'s return value as "value at elevDeg[ti],phiDeg[pi]
+  // in the instance's own local/pre-heading frame" (2D plots read it
+  // directly; resampleInstanceToCanonical() folds in heading afterwards) -
+  // so tilt slots into that same contract as one more per-cell lookup.
+  // Math: convert each queried native (elev,phi) into a unit vector
+  // (boresight = elev=0,phi=0 -> +X; phi=90 -> +Y; zenith -> +Z), apply the
+  // INVERSE tilt rotation (about Y) to find which direction of the
+  // UNTILTED source pattern maps onto it, convert back to (elev,phi), and
+  // bilinearly interpolate the original grid there.
+  // Every baseline .nec run in this project only solves the upper
+  // hemisphere (elevDeg 0=horizon..90=zenith, confirmed across every
+  // model/pol/env in patterns.json) - there is no below-horizon data at
+  // all. For forward-hemisphere directions a downtilt only ever needs
+  // elevN >= 0 (it pulls from higher up, toward zenith), but uptilt (and,
+  // for downtilt, the near-horizon directions behind the antenna) can call
+  // for elevN < 0, which doesn't exist in the data. Every antenna geometry
+  // in this project (confirmed directly from GW wire cards: PLC1669 h/v,
+  // ZDADJ433-12YG h/v, WA5VJB CheapYagi, HG2412P) is physically planar/
+  // mirror-symmetric about its own local horizontal plane (elev=0), so
+  // instead of clamping elevN<0 to the horizon row - which would wrongly
+  // reuse the boresight-adjacent peak gain for a direction that should be
+  // increasingly off-boresight - it's mirrored (elevN -> -elevN, same phi)
+  // to sample the geometrically-equivalent above-horizon direction. This is
+  // exact for the horizontal-pol Yagis (all wires lie exactly in one
+  // elev=0 plane) and the corner reflector (every wire's Z-span is
+  // symmetric about that plane), and a very close approximation for the
+  // vertical-pol variants (each wire individually Z-symmetric about the
+  // same plane).
+  function applyTiltToGrid(grid, elevDeg, phiDeg, tiltDeg){
+    if (!tiltDeg) return grid; // exact no-op at 0 tilt - no float roundtrip
+    var nE = elevDeg.length, nP = phiDeg.length;
+    var elMin = elevDeg[0], elMax = elevDeg[nE-1];
+    var elStep = nE>1 ? (elMax-elMin)/(nE-1) : 1;
+    var phiStep = 360/nP;
+    var t = tiltDeg*Math.PI/180, cosT = Math.cos(t), sinT = Math.sin(t);
+    var out = new Array(nE);
+    for (var ti=0; ti<nE; ti++){
+      var elR = elevDeg[ti]*Math.PI/180;
+      var row = new Array(nP);
+      for (var pi=0; pi<nP; pi++){
+        var phR = phiDeg[pi]*Math.PI/180;
+        var x = Math.cos(elR)*Math.cos(phR), y = Math.cos(elR)*Math.sin(phR), z = Math.sin(elR);
+        var xN = x*cosT - z*sinT;
+        var zN = x*sinT + z*cosT;
+        var elevN = Math.asin(Math.max(-1, Math.min(1, zN)))*180/Math.PI;
+        var phiN = ((Math.atan2(y, xN)*180/Math.PI) % 360 + 360) % 360;
+        if (elevN < elMin) elevN = 2*elMin - elevN; // mirror below-horizon queries back into the measured hemisphere
+        var ef = Math.max(0, Math.min(nE-1, (elevN-elMin)/elStep));
+        var ei0 = Math.min(nE-2, Math.floor(ef)), ei1 = Math.min(nE-1, ei0+1), eFrac = ef-ei0;
+        var pf = phiN/phiStep;
+        var pi0 = Math.floor(pf) % nP, pi1 = (pi0+1) % nP, pFrac = pf-Math.floor(pf);
+        var v00 = grid[ei0][pi0], v01 = grid[ei0][pi1], v10 = grid[ei1][pi0], v11 = grid[ei1][pi1];
+        var v0 = v00 + (v01-v00)*pFrac, v1 = v10 + (v11-v10)*pFrac;
+        row[pi] = v0 + (v1-v0)*eFrac;
+      }
+      out[ti] = row;
+    }
+    return out;
+  }
+
   // per-instance equivalent of the old global currentGainGrid(): live-computes
   // via computeLiveGrid() against the shared state.env, or reads a pre-baked
   // grid, parameterized by the instance instead of a global.
@@ -970,11 +1055,26 @@
     var dataset = instance.data;
     var grid;
     if (isLiveModeFor(dataset) && state.env !== "freeSpace"){
+      // Tilt must be applied to the antenna's own gain pattern BEFORE the
+      // ground-reflection term is added, not after: groundReflectionDb() is
+      // evaluated per elevDeg row as a physical grazing angle/height effect
+      // that doesn't move when the antenna is mechanically tilted, so it has
+      // to stay pinned to the untouched elevDeg axis. Tilting the combined
+      // gain+ground grid afterwards (the old approach) would incorrectly
+      // drag the ground-interference structure along with the tilted gain
+      // lobe instead of recalculating it for each cell's real elevation.
       var baseline = dataset.freeSpace;
-      grid = computeLiveGrid(baseline, groundForKey(state.env, dataset), instance.heightM, baseline.freqMhz, instance.polarization);
+      var baseGrid = instance.tiltDeg
+        ? applyTiltToGrid(baseline.gainDb, baseline.elevDeg, baseline.phiDeg, instance.tiltDeg)
+        : baseline.gainDb;
+      grid = computeLiveGrid(baseline.elevDeg, baseline.phiDeg, baseGrid, groundForKey(state.env, dataset), instance.heightM, baseline.freqMhz, instance.polarization);
     } else {
       var env = dataset[state.env] ? state.env : Object.keys(dataset)[0];
       grid = dataset[env].gainDb;
+      if (instance.tiltDeg){
+        var shape = instanceGridShape(instance);
+        grid = applyTiltToGrid(grid, shape.elevDeg, shape.phiDeg, instance.tiltDeg);
+      }
     }
     // measuredCoupling mode: additive real-NEC coupling correction on top of
     // whatever grid above (live or baked) - see instanceCoupledDeltaGrid().
@@ -1214,7 +1314,7 @@
   // click
   function liveCouplingSignature(insts){
     return JSON.stringify(insts.map(function(a){
-      return { id: a.id, model: a.model, polarization: a.polarization, heightM: a.heightM, headingDeg: a.headingDeg };
+      return { id: a.id, model: a.model, polarization: a.polarization, heightM: a.heightM, headingDeg: a.headingDeg, mount: a.mount };
     }));
   }
 
@@ -1316,6 +1416,7 @@
       result: null,            // {freqMhz, coarseElevDeg, coarsePhiDeg, deltas:{id:grid}}
       error: null
     },
+    targetFreqMhz: null,     // frequency guardrail - restricts instModelSelect to models at this frequency
     env: null,               // set once patterns.json loads - global terrain, shared by all instances
     view: "3d",              // "3d" dome or "2d" pattern/field plots - gates draw2D()
     noise: -105,
@@ -1332,7 +1433,14 @@
       polarization: polarization,
       heightM: 6.0,
       headingDeg: 0,
-      mount: "midpoint",   // "butt" | "midpoint" - cosmetic, tower diagram only
+      mount: "midpoint",   // "butt" | "midpoint" - affects tower diagram rendering
+                           // and, when live-eligible, the "Compute coupling"
+                           // solve's boom placement (see coupling_server.py)
+      tiltDeg: 0,          // mechanical downtilt (+) / uptilt (-), applied as a
+                           // pattern resampling in instanceNativeGrid() -> see
+                           // applyTiltToGrid(). Not fed into the measured/live
+                           // mutual-coupling NEC solves, which still assume a
+                           // level boom - see applyTiltToGrid()'s own comment.
       data: null
     };
   }
@@ -1723,8 +1831,20 @@
     return best;
   }
 
-  // nearest-neighbor resample of one instance's native grid onto the
-  // canonical elev/phi grid, folding heading rotation into the same pass
+  // bilinear resample of one instance's native grid onto the canonical
+  // elev/phi grid, folding heading rotation into the same pass. Not every
+  // model shares the same native phi resolution - plc1669/horizontal is
+  // 2 deg/180 points in every environment while every other model+pol is
+  // 10 deg/36 points - and getCanonicalGrid() picks whichever enabled
+  // instance has the most cells, so combining a plc1669/horizontal antenna
+  // with anything else means the others get resampled onto a 5x finer
+  // grid than their native data. Nearest-neighbor (this function's
+  // original approach) turned that into a visible staircase/faceted
+  // pattern on the coarser antenna's dome and merged-union cells; bilinear
+  // reduces to the exact same values as nearest-neighbor whenever the
+  // native and canonical grids are already aligned (the common
+  // same-resolution case, including the always-exact elevation axis,
+  // which is 1 deg/91 points for every model), so this is a pure upgrade.
   function resampleInstanceToCanonical(instance, canon){
     var shape = instanceGridShape(instance);
     var nativeElev = shape.elevDeg, nativePhi = shape.phiDeg;
@@ -1735,12 +1855,22 @@
     var nTc = canon.elevDeg.length, nPc = canon.phiDeg.length;
     var out = new Array(nTc);
     for (var ti=0; ti<nTc; ti++){
-      var si = Math.max(0, Math.min(nE-1, Math.round((canon.elevDeg[ti]-elMin)/elStep)));
+      var ef = Math.max(0, Math.min(nE-1, (canon.elevDeg[ti]-elMin)/elStep));
+      var ei0 = Math.max(0, Math.min(nE-2, Math.floor(ef)));
+      var ei1 = Math.min(nE-1, ei0+1);
+      var eFrac = ef - ei0;
       var row = new Array(nPc);
       for (var pi=0; pi<nPc; pi++){
         var localPhi = ((canon.phiDeg[pi] - instance.headingDeg) % 360 + 360) % 360;
-        var spi = Math.round(localPhi/phiStep) % nPn;
-        row[pi] = nativeGrid[si][spi];
+        var pf = localPhi/phiStep;
+        var pi0 = Math.floor(pf) % nPn;
+        var pi1 = (pi0+1) % nPn;
+        var pFrac = pf - Math.floor(pf);
+        var v00 = nativeGrid[ei0][pi0], v01 = nativeGrid[ei0][pi1];
+        var v10 = nativeGrid[ei1][pi0], v11 = nativeGrid[ei1][pi1];
+        var v0 = v00 + (v01-v00)*pFrac;
+        var v1 = v10 + (v11-v10)*pFrac;
+        row[pi] = v0 + (v1-v0)*eFrac;
       }
       out[ti] = row;
     }
@@ -2104,6 +2234,18 @@
     }
   }
 
+  // picks a "nice" gridline step (from a fixed candidate ladder) so that
+  // maxVal/step stays under maxTicks - used to label both the full-scene
+  // field plot (fixed 20km/5km ceilings) and the zoomed near-field plot
+  // (fixed at 10% of those) from the same tick-drawing code.
+  function niceAxisStep(maxVal, maxTicks){
+    var candidates = [0.1,0.2,0.25,0.5,1,2,2.5,5,10,20,25,50,100];
+    for (var i=0; i<candidates.length; i++){
+      if (maxVal/candidates[i] <= maxTicks) return candidates[i];
+    }
+    return candidates[candidates.length-1];
+  }
+
   // range x altitude "signal strength field": for every (range, altitude)
   // pixel along the peak-azimuth vertical slice, convert to an elevation
   // angle psi=atan2(altitude,range), sample the same live gain grid used by
@@ -2111,7 +2253,12 @@
   // budget over the true slant distance - this surfaces the two-ray
   // interference lobes/nulls as a function of BOTH range and altitude, which
   // the 3D dome (one boundary range per direction) can't show.
-  function drawFieldPlot(gainGrid, peak, thresholdDbm, canvasId){
+  // rangeMaxKm/altMaxKm default to the full-scene FIELD_MAX_* ceilings but
+  // can be overridden (see the "-zoom" panel, fixed at 10% of those) to
+  // render the same style of plot over a smaller near-field window.
+  function drawFieldPlot(gainGrid, peak, thresholdDbm, canvasId, rangeMaxKm, altMaxKm){
+    rangeMaxKm = rangeMaxKm || FIELD_MAX_RANGE_KM;
+    altMaxKm = altMaxKm || FIELD_MAX_ALT_KM;
     var c = setupCanvas(document.getElementById(canvasId || "fieldCanvas"));
     var ctx = c.ctx, w = c.w, h = c.h;
     ctx.clearRect(0, 0, w, h);
@@ -2127,10 +2274,10 @@
 
     var marginGrid = new Array(rows);
     for (var ry=0; ry<rows; ry++){
-      var altKm = FIELD_MAX_ALT_KM * (1 - (ry+0.5)/rows);
+      var altKm = altMaxKm * (1 - (ry+0.5)/rows);
       var mrow = new Array(cols);
       for (var rx=0; rx<cols; rx++){
-        var rangeKm = FIELD_MAX_RANGE_KM * ((rx+0.5)/cols);
+        var rangeKm = rangeMaxKm * ((rx+0.5)/cols);
         var elevDeg = Math.atan2(altKm, Math.max(rangeKm,1e-6))*180/Math.PI;
         var ti = Math.max(0, Math.min(nT-1, Math.round((elevDeg-elMin)/elStep)));
         var gainDb = gainGrid[ti][col];
@@ -2190,16 +2337,21 @@
     ctx.font = "10px 'IBM Plex Mono', monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    var rangeStep = FIELD_MAX_RANGE_KM <= 20 ? 5 : 10;
-    for (var rv=0; rv<=FIELD_MAX_RANGE_KM; rv+=rangeStep){
-      var xt = padL + (rv/FIELD_MAX_RANGE_KM)*plotW;
-      ctx.fillText(String(rv), xt, padT+plotH+4);
+    var rangeStep = niceAxisStep(rangeMaxKm, 6);
+    var rangeTicks = Math.floor(rangeMaxKm/rangeStep + 1e-9);
+    for (var rt=0; rt<=rangeTicks; rt++){
+      var rv = rt*rangeStep;
+      var xt = padL + (rv/rangeMaxKm)*plotW;
+      ctx.fillText(rangeStep<1 ? rv.toFixed(1) : String(Math.round(rv)), xt, padT+plotH+4);
     }
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    for (var av=0; av<=FIELD_MAX_ALT_KM; av++){
-      var yt = padT + (1-av/FIELD_MAX_ALT_KM)*plotH;
-      ctx.fillText(String(av*1000), padL-6, yt);
+    var altStep = niceAxisStep(altMaxKm, 6);
+    var altTicks = Math.floor(altMaxKm/altStep + 1e-9);
+    for (var at=0; at<=altTicks; at++){
+      var av = at*altStep;
+      var yt = padT + (1-av/altMaxKm)*plotH;
+      ctx.fillText(String(Math.round(av*1000)), padL-6, yt);
     }
   }
 
@@ -2241,6 +2393,11 @@
       '<span style="left:0%">&minus;140</span><span style="left:28.6%"><b>&minus;120</b>quiet</span>'+
       '<span style="left:50%"><b>&minus;105</b>typical</span><span style="left:64.3%"><b>&minus;95</b>noisy</span>'+
       '<span style="left:100%">&minus;70</span></div></div>'));
+    plots.appendChild(plotPanel(true, "Signal strength field, zoomed to near range and altitude", "Signal strength field, zoomed (near range &amp; altitude)", "fieldZoomPlotSub"+suf, "fieldZoomCanvas"+suf,
+      '<div class="field-colorbar"><div class="field-colorbar-track"></div><div class="field-colorbar-ticks">'+
+      '<span style="left:0%">&minus;140</span><span style="left:28.6%"><b>&minus;120</b>quiet</span>'+
+      '<span style="left:50%"><b>&minus;105</b>typical</span><span style="left:64.3%"><b>&minus;95</b>noisy</span>'+
+      '<span style="left:100%">&minus;70</span></div></div>'));
     section.appendChild(plots);
     return section;
   }
@@ -2268,17 +2425,21 @@
       if (head){
         head.innerHTML = "<b>" + ((MODEL_META[inst.model]&&MODEL_META[inst.model].label) || inst.model) + "</b> &middot; " +
           (POL_META_LABEL[inst.polarization]||inst.polarization) + " &middot; " + inst.heightM.toFixed(1) + "m AGL &middot; " + inst.headingDeg + "&deg;" +
+          (inst.tiltDeg ? " &middot; " + inst.tiltDeg + "&deg; " + (inst.tiltDeg>0 ? "downtilt" : "uptilt") : "") +
           (inst.enabled ? "" : " &middot; disabled");
       }
       var thresholdLabel = "boundary @ " + Math.round(thresholdDbm) + " dBm";
       var rangeAltSub = document.getElementById("rangeAltPlotSub"+suf);
       var fieldSub = document.getElementById("fieldPlotSub"+suf);
+      var fieldZoomSub = document.getElementById("fieldZoomPlotSub"+suf);
       if (rangeAltSub) rangeAltSub.textContent = thresholdLabel;
       if (fieldSub) fieldSub.textContent = thresholdLabel + " (dashed)";
+      if (fieldZoomSub) fieldZoomSub.textContent = thresholdLabel + " (dashed) · first 10% of range/altitude";
       drawAzimuthPlot(gainGrid, peak, "azCanvas"+suf, "azPlotSub"+suf);
       drawElevationPlot(gainGrid, peak, "elCanvas"+suf, "elPlotSub"+suf);
       drawRangeAltPlot(gainGrid, peak, thresholdDbm, "rangeAltCanvas"+suf);
       drawFieldPlot(gainGrid, peak, thresholdDbm, "fieldCanvas"+suf);
+      drawFieldPlot(gainGrid, peak, thresholdDbm, "fieldZoomCanvas"+suf, FIELD_MAX_RANGE_KM*0.1, FIELD_MAX_ALT_KM*0.1);
     });
 
     // draw2D() repurposes the module-level elevArr/phiArr/nT/nP/TAG_* globals
@@ -2783,7 +2944,9 @@
   var allModels = null;
   var MODEL_ORDER = [];
   var MODEL_META = {};
-  var MODEL_ABBR = { plc1669: "PLC1669", zda433: "ZDA433", wa5vjb_yagi: "WA5VJB", hg2412p: "HG2412P" };
+  var MODEL_FREQ = {};   // model key -> freqMhz (one frequency per model, all pols/envs)
+  var FREQ_ORDER = [];   // distinct freqMhz values across all models, ascending
+  var MODEL_ABBR = { plc1669: "PLC1669", zda433: "ZDA433", wa5vjb_yagi: "WA5VJB", hg2412p: "HG2412P", zdaqj166: "ZDAQJ166" };
   var POL_META_LABEL = { horizontal: "H-pol", vertical: "V-pol", circular: "CP" };
 
   // builds the terrain roster once at boot. Terrain/ground is shared by
@@ -2870,9 +3033,65 @@
     document.getElementById("tagNote").innerHTML = profile.note;
   }
 
+  // a model's frequency is the same across every polarization/environment it
+  // offers (verified against patterns.json) - take it from whichever pol/env
+  // happens to be first
+  function modelFreqMhz(model){
+    var pols = allModels[model].polarizations;
+    var polKey = Object.keys(pols)[0];
+    var dataset = pols[polKey];
+    var envKey = dataset.freeSpace ? "freeSpace" : Object.keys(dataset)[0];
+    return dataset[envKey].freqMhz;
+  }
+  function freqLabel(freq){
+    if (freq >= 1000) return (freq/1000).toFixed(2).replace(/\.?0+$/, "") + " GHz";
+    return Math.round(freq) + " MHz";
+  }
+  // frequency guardrail: only models matching state.targetFreqMhz are
+  // selectable, so mixed-frequency antenna sets can't be created in the
+  // first place (live/measured coupling both require one shared frequency)
+  function buildFreqGuardButtons(){
+    freqGuardGroup.innerHTML = "";
+    FREQ_ORDER.forEach(function(freq){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "seg-btn";
+      btn.dataset.freq = String(freq);
+      btn.setAttribute("aria-pressed", freq===state.targetFreqMhz ? "true":"false");
+      btn.textContent = freqLabel(freq);
+      btn.addEventListener("click", function(){ selectTargetFreq(freq); });
+      freqGuardGroup.appendChild(btn);
+    });
+  }
+  function refreshFreqGuardButtons(){
+    Array.prototype.forEach.call(freqGuardGroup.children, function(b){
+      b.setAttribute("aria-pressed", Number(b.dataset.freq)===state.targetFreqMhz ? "true":"false");
+    });
+  }
+  function selectTargetFreq(freq){
+    if (freq === state.targetFreqMhz) return;
+    state.targetFreqMhz = freq;
+    refreshFreqGuardButtons();
+    populateInstModelSelect();
+    // any existing antenna outside the new frequency gets migrated to that
+    // frequency's default model rather than left in an unselectable state
+    state.antennas.forEach(function(inst){
+      if (MODEL_FREQ[inst.model] === freq) return;
+      var model = MODEL_ORDER.filter(function(k){ return MODEL_FREQ[k]===freq; })[0];
+      var avail = allModels[model].polarizations;
+      var pol = avail[inst.polarization] ? inst.polarization : (avail.horizontal ? "horizontal" : Object.keys(avail)[0]);
+      setInstanceDataset(inst, model, pol);
+    });
+    renderAntennaChips();
+    refreshAntennaControlsForActive();
+    refreshCombineAvailability();
+    drawTower();
+    afterInstanceEdit();
+  }
   function populateInstModelSelect(){
     instModelSelect.innerHTML = "";
     MODEL_ORDER.forEach(function(key){
+      if (state.targetFreqMhz != null && MODEL_FREQ[key] !== state.targetFreqMhz) return;
       var opt = document.createElement("option");
       opt.value = key;
       opt.textContent = MODEL_META[key].label;
@@ -2963,6 +3182,11 @@
       headingValueInput.value = inst.headingDeg;
       headingValueInput.readOnly = false;
     }
+    var tiltSlider = document.getElementById("instTiltSlider");
+    var tiltValueInput = document.getElementById("instTiltValue");
+    tiltSlider.value = inst.tiltDeg;
+    tiltValueInput.value = inst.tiltDeg;
+
     document.getElementById("instMountButtBtn").setAttribute("aria-pressed", inst.mount==="butt" ? "true":"false");
     document.getElementById("instMountMidBtn").setAttribute("aria-pressed", inst.mount==="midpoint" ? "true":"false");
 
@@ -2971,6 +3195,25 @@
     updateThresholdLabels();
     updateLinkBudgetMeta();
     updateInstWarningNote();
+  }
+
+  // "Other antenna opacity" only does anything when refreshDome() is
+  // actually rendering the two-dome view (see its measuredCoupling/
+  // liveCoupling branches) - measuredCoupling is inherently pair-only so
+  // getCoupledPairInfo() already implies exactly 2, but liveCoupling
+  // accepts 2..6 participants and only renders dual-dome for exactly 2,
+  // falling back to a single merged union dome (no secondary mesh at all)
+  // for 3+. Keeping this check separate from combine-mode alone is what
+  // this function is for - without it the slider row stayed visible and
+  // interactive with 3+ live-coupling antennas despite having nothing to
+  // act on.
+  function refreshCoupledOpacityVisibility(){
+    var dual = (state.combineMode === "measuredCoupling" && !!getCoupledPairInfo()) ||
+      (state.combineMode === "liveCoupling" && (function(){
+        var p = getLiveCouplingParticipants();
+        return !!(p && p.length === 2);
+      })());
+    document.getElementById("coupledOpacityRow").hidden = !dual;
   }
 
   // measuredCoupling toggle only makes sense for 2 enabled instances
@@ -2990,8 +3233,8 @@
       state.combineMode = "union";
       document.getElementById("combineUnionBtn").setAttribute("aria-pressed","true");
       measuredBtn.setAttribute("aria-pressed","false");
-      document.getElementById("coupledOpacityRow").hidden = true;
     }
+    refreshCoupledOpacityVisibility();
     updateMeasuredCouplingNote();
     // eligibility (or which pair now qualifies) may have just changed, which
     // changes whether the active instance's height/heading sliders should
@@ -3035,9 +3278,9 @@
       state.combineMode = "union";
       document.getElementById("combineUnionBtn").setAttribute("aria-pressed","true");
       btn.setAttribute("aria-pressed","false");
-      document.getElementById("coupledOpacityRow").hidden = true;
       document.getElementById("liveCouplingRow").hidden = true;
     }
+    refreshCoupledOpacityVisibility();
 
     if (state.combineMode !== "liveCoupling"){
       computeBtn.disabled = false;
@@ -3237,6 +3480,7 @@
 
   // ---- Antennas panel wiring
   var instModelSelect = document.getElementById("instModelSelect");
+  var freqGuardGroup = document.getElementById("freqGuardGroup");
   var instPolBtns = {
     horizontal: document.getElementById("instPolHBtn"),
     vertical: document.getElementById("instPolVBtn"),
@@ -3328,6 +3572,27 @@
     drawTower();
     afterInstanceEdit();
   });
+  document.getElementById("instTiltSlider").addEventListener("input", function(ev){
+    var inst = activeAntenna();
+    if (!inst) return;
+    inst.tiltDeg = parseInt(ev.target.value, 10);
+    document.getElementById("instTiltValue").value = inst.tiltDeg;
+    drawTower();
+    afterInstanceEdit();
+  });
+  document.getElementById("instTiltValue").addEventListener("change", function(ev){
+    var inst = activeAntenna();
+    if (!inst) return;
+    var slider = document.getElementById("instTiltSlider");
+    var v = parseInt(ev.target.value, 10);
+    if (!isFinite(v)) v = inst.tiltDeg;
+    v = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v));
+    inst.tiltDeg = v;
+    ev.target.value = v;
+    slider.value = v;
+    drawTower();
+    afterInstanceEdit();
+  });
   function selectInstMount(mount){
     var inst = activeAntenna();
     if (!inst || inst.mount === mount) return;
@@ -3359,10 +3624,10 @@
     document.getElementById("combineUnionBtn").setAttribute("aria-pressed", mode==="union"?"true":"false");
     document.getElementById("combineMeasuredBtn").setAttribute("aria-pressed", mode==="measuredCoupling"?"true":"false");
     document.getElementById("combineLiveBtn").setAttribute("aria-pressed", mode==="liveCoupling"?"true":"false");
-    document.getElementById("coupledOpacityRow").hidden = (mode !== "measuredCoupling" && mode !== "liveCoupling");
     document.getElementById("liveCouplingRow").hidden = mode !== "liveCoupling";
     updateMeasuredCouplingNote();
     refreshLiveCouplingStatus();
+    refreshCoupledOpacityVisibility();
     if (allModels){
       refreshAntennaControlsForActive();
       refreshDome();
@@ -3400,7 +3665,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ antennas: participants.map(function(a){
-        return { id: a.id, model: a.model, polarization: a.polarization, heightM: a.heightM, headingDeg: a.headingDeg };
+        return { id: a.id, model: a.model, polarization: a.polarization, heightM: a.heightM, headingDeg: a.headingDeg, mount: a.mount };
       }) })
     }).then(function(r){ return r.json().then(function(data){ return { ok: r.ok, data: data }; }); })
       .then(function(res){
@@ -3445,10 +3710,18 @@
     MODEL_ORDER = Object.keys(data);
     MODEL_ORDER.forEach(function(key){
       MODEL_META[key] = { label: data[key].label || key };
+      MODEL_FREQ[key] = modelFreqMhz(key);
     });
-    populateInstModelSelect();
+    FREQ_ORDER = MODEL_ORDER.reduce(function(acc, key){
+      if (acc.indexOf(MODEL_FREQ[key]) === -1) acc.push(MODEL_FREQ[key]);
+      return acc;
+    }, []).sort(function(a,b){ return a-b; });
 
     var defaultModel = MODEL_ORDER.indexOf("plc1669") >= 0 ? "plc1669" : MODEL_ORDER[0];
+    state.targetFreqMhz = MODEL_FREQ[defaultModel];
+    buildFreqGuardButtons();
+    populateInstModelSelect();
+
     var avail = allModels[defaultModel].polarizations;
     var defaultPol = avail.horizontal ? "horizontal" : Object.keys(avail)[0];
     var inst = makeAntennaInstance(defaultModel, defaultPol);

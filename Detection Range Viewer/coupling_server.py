@@ -70,6 +70,7 @@ BASELINE_FILES = {
     ("zda433", "vertical"): os.path.join(ROOT, "ZDADJ433-12YG", "ZDADJ433_12YG_9el_433MHz_vertical_freespace_grid.nec"),
     ("wa5vjb_yagi", "horizontal"): os.path.join(ROOT, "WA5VJB CheapYagi", "WA5VJB_CheapYagi_11el_2450MHz_horizontal_freespace_grid.nec"),
     ("hg2412p", "vertical"): os.path.join(ROOT, "HG2412P Corner Reflector", "HG2412P_derived_corner_reflector_2450MHz_vertical_freespace_grid.nec"),
+    ("zdaqj166", "vertical"): os.path.join(ROOT, "ZDAQJ166", "ZDAQJ166_166MHz_vertical_freespace_grid.nec"),
 }
 
 RP_N_THETA, RP_DTHETA = 10, 10.0   # matches gen_coupled_pairs.py's coarse grid,
@@ -78,7 +79,7 @@ RP_N_PHI, RP_DPHI = 24, 15.0       # so index.html's bilinearCoupledDelta() can 
                                     # here since nothing parses a .out file).
 FREQ_TOL_MHZ = 0.05
 
-_baseline_cache = {}   # (model, pol) -> (wires, fed_tag, fed_seg, freq_mhz, nominal_z)
+_baseline_cache = {}   # (model, pol) -> (wires, fed_tag, fed_seg, freq_mhz, nominal_z, butt_x)
 _iso_cache = {}         # (model, pol) -> {"elevDeg","phiDeg","gainDb"}
 
 
@@ -95,12 +96,20 @@ def get_baseline(model, pol):
     if not path or not os.path.isfile(path):
         raise SolveError("missing_baseline", "No live-solve wire geometry available for {} / {}".format(model, pol),
                           {"model": model, "polarization": pol})
-    wires, fed_tag, fed_seg, freq_mhz = gcp.load_base(path)
+    wires, fed_tag, fed_seg, freq_mhz, butt_x = gcp.load_base(path)
     zs = [w["z1"] for w in wires] + [w["z2"] for w in wires]
     nominal_z = sum(zs) / len(zs)
-    entry = (wires, fed_tag, fed_seg, freq_mhz, nominal_z)
+    entry = (wires, fed_tag, fed_seg, freq_mhz, nominal_z, butt_x)
     _baseline_cache[key] = entry
     return entry
+
+
+def shift_wires_x(wires, dx):
+    """Translates every wire by dx along X only (no rotation/Z change) -
+    used to re-reference a "butt mounted" instance's boom so its butt end
+    (rather than its geometric midpoint) sits on the shared mast axis,
+    before transform_wires() rotates it into place for a given heading."""
+    return [dict(w, x1=w["x1"] + dx, x2=w["x2"] + dx) for w in wires]
 
 
 def solve_pattern(wires, fed_tag, fed_seg, freq_mhz, phi0):
@@ -186,7 +195,7 @@ def get_isolated(model, pol):
     key = (model, pol)
     if key in _iso_cache:
         return _iso_cache[key]
-    wires, fed_tag, fed_seg, freq_mhz, _nominal_z = get_baseline(model, pol)
+    wires, fed_tag, fed_seg, freq_mhz, _nominal_z, _butt_x = get_baseline(model, pol)
     elev_deg, phi_deg, grid = solve_pattern(wires, fed_tag, fed_seg, freq_mhz, 0.0)
     entry = {"elevDeg": elev_deg, "phiDeg": phi_deg, "gainDb": grid}
     _iso_cache[key] = entry
@@ -216,9 +225,16 @@ def compute_coupling(antennas):
     participants = []
     offset = 0
     for a in antennas:
-        wires, fed_tag, fed_seg, freq_mhz, nominal_z = baselines[a["id"]]
+        wires, fed_tag, fed_seg, freq_mhz, nominal_z, butt_x = baselines[a["id"]]
         dz = a["heightM"] - nominal_z
-        placed = gcp.transform_wires(wires, dz=dz, heading_deg=a["headingDeg"])
+        # load_base() always recenters the boom to its geometric midpoint at
+        # X=0 (the mast axis); for a butt-mounted instance, re-reference the
+        # boom so its rear tip - near the reflector, see load_base()'s
+        # comment - sits on the mast axis instead, before heading rotation
+        # swings the offset boom around it. Height (Z) is unaffected either
+        # way - every baseline's boom runs along X at constant Z.
+        base_wires = shift_wires_x(wires, -butt_x) if a.get("mount") == "butt" else wires
+        placed = gcp.transform_wires(base_wires, dz=dz, heading_deg=a["headingDeg"])
         participants.append({
             "id": a["id"], "model": a["model"], "polarization": a["polarization"],
             "headingDeg": a["headingDeg"], "wires": placed,

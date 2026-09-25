@@ -67,6 +67,7 @@ MODEL_LABELS = {
     "zdadj433-12yg":          ("zda433",   "ZDA ZDADJ433-12YG · 9-EL YAGI"),
     "wa5vjb cheapyagi":       ("wa5vjb_yagi", "WA5VJB CHEAP YAGI · 11-EL YAGI (2.45GHz)"),
     "hg2412p corner reflector": ("hg2412p", "HG2412P · CORNER REFLECTOR (2.45GHz)"),
+    "zdaqj166":                ("zdaqj166", "ZDAQJ166 · OMNI DIPOLE (166MHz)"),
 }
 
 

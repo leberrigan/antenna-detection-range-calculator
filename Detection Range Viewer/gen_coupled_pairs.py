@@ -140,7 +140,31 @@ def load_base(path):
     for w in wires:
         w["x1"] += xshift
         w["x2"] += xshift
-    return wires, fed_tag, fed_seg, freq_mhz
+    # "Butt mount" reference X, in this already-recentered frame: the boom
+    # extreme nearest the reflector, matching the common mechanical
+    # convention of clamping a Yagi's mast plate at the rear tip, right
+    # behind the reflector. The reflector is identified as the longest
+    # wire(s) in the structure (physically true: a Yagi reflector element is
+    # longer than the driven element, which is longer than every director;
+    # a corner-reflector screen's rods are longer than its driven dipole) -
+    # averaging the X-midpoint across every wire tied for longest (rather
+    # than picking one arbitrarily) is what makes this generalize to
+    # hg2412p's 24 equal-length mesh/screen wires, where any single one of
+    # them can sit near the boom's X-center even though the screen as a
+    # whole is clearly to one side. Note this is *not* simply "farther from
+    # the feed": for a linear Yagi the reflector sits just behind (i.e.
+    # near) the driven element, not at the far director-tip end - verified
+    # numerically against all four baseline files before landing on this.
+    # Used only by coupling_server.py's live solve - unused here.
+    def _wire_len(w):
+        return ((w["x2"]-w["x1"])**2 + (w["y2"]-w["y1"])**2 + (w["z2"]-w["z1"])**2) ** 0.5
+    max_len = max(_wire_len(w) for w in wires)
+    tied = [w for w in wires if _wire_len(w) >= max_len * 0.999]
+    reflector_x = sum((w["x1"] + w["x2"]) / 2.0 for w in tied) / len(tied)
+    xs2 = [w["x1"] for w in wires] + [w["x2"] for w in wires]
+    x_min, x_max = min(xs2), max(xs2)
+    butt_x = x_max if abs(reflector_x - x_max) < abs(reflector_x - x_min) else x_min
+    return wires, fed_tag, fed_seg, freq_mhz, butt_x
 
 
 def transform_wires(wires, dz=0.0, heading_deg=0.0):
@@ -241,7 +265,7 @@ def main():
 
     result = {}
     for model, pol in BASE_FILES:
-        wires, fed_tag, fed_seg, freq_mhz = load_base(BASE_FILES[(model, pol)])
+        wires, fed_tag, fed_seg, freq_mhz, _butt_x = load_base(BASE_FILES[(model, pol)])
         lambda_m = 299.792458 / freq_mhz
         print("== {} / {} ({:.3f} MHz, lambda={:.3f} m, {} wires, fed tag {}) ==".format(
             model, pol, freq_mhz, lambda_m, len(wires), fed_tag))
