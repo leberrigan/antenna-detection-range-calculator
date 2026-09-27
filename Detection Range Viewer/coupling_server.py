@@ -303,9 +303,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 def main():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-    server = http.server.HTTPServer(("127.0.0.1", port), Handler)
-    print("Serving Detection Range Viewer + /compute-coupling on http://127.0.0.1:{}/".format(port))
-    print("Open http://127.0.0.1:{}/index.html".format(port))
+    # Defaults to loopback-only for local dev; set COUPLING_SERVER_HOST=0.0.0.0
+    # to accept connections from outside the host (e.g. behind a reverse proxy).
+    host = os.environ.get("COUPLING_SERVER_HOST", "127.0.0.1")
+    server = http.server.HTTPServer((host, port), Handler)
+    print("Serving Detection Range Viewer + /compute-coupling on http://{}:{}/".format(host, port))
+    print("Open http://{}:{}/index.html".format("127.0.0.1" if host == "0.0.0.0" else host, port))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
