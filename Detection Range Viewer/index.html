@@ -556,6 +556,32 @@
   :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
 </style>
 
+<header class="motus-header">
+  <nav class="navbar">
+    <a class="navbar-brand" href="https://motus.org" target="_blank" rel="noopener">
+      <img class="navbar-brand-logo" src="/shared/img/motus-logo-horizontal.png" alt="Motus">
+    </a>
+    <ul class="nav">
+      <li class="nav-item"><a class="nav-link navbar-tools-link" href="/">Tools</a></li>
+      <li class="nav-item navbar-crumb">Detection Range Viewer</li>
+    </ul>
+  </nav>
+  <nav class="navbar navbar-account">
+    <ul class="nav">
+      <li class="nav-item" id="motus-signin-item">
+        <a class="navbar-signin-link" href="/oauth2/sign_in?rd=/">Sign in</a>
+      </li>
+      <li class="nav-item dropdown" id="motus-account-item" style="display:none">
+        <a class="nav-link dropdown-toggle" href="#" id="motus-account-toggle"></a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" id="tool-header-admin-link" href="/user-management/" style="display:none">Users</a></li>
+          <li><a class="dropdown-item" href="/oauth2/sign_out?rd=/">Sign out</a></li>
+        </ul>
+      </li>
+    </ul>
+    <img class="navbar-logo-birds-canada" src="/shared/img/birds-canada-logo-horizontal.png" alt="Birds Canada">
+  </nav>
+</header>
 <div class="app">
   <header class="topbar">
     <span class="mono" style="font-weight:700; font-size:16px;">Detection Range Viewer</span>
@@ -757,6 +783,10 @@
     </div>
   </main>
 </div>
+<footer class="tool-footer">
+  <img class="tool-footer-logo tool-footer-logo-motus" src="/shared/img/motus-logo-stacked.png" alt="Motus">
+  <img class="tool-footer-logo tool-footer-logo-birds-canada" src="/shared/img/birds-canada-logo-stacked.png" alt="Birds Canada">
+</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
