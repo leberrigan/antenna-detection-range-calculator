@@ -769,6 +769,10 @@
           <label for="rotateToggle">Auto-rotate</label>
           <label class="switch"><input type="checkbox" id="rotateToggle"><span class="track"></span><span class="thumb"></span></label>
         </div>
+        <div class="ctrl-row">
+          <label for="flightPathToggle">Flight paths</label>
+          <label class="switch"><input type="checkbox" id="flightPathToggle"><span class="track"></span><span class="thumb"></span></label>
+        </div>
       </section>
 
       <section class="panel" aria-label="Flight trajectory" id="probPanel" hidden>
@@ -782,6 +786,16 @@
             </span>
           </div>
           <input type="range" id="probAltitudeSlider" min="0" max="2000" step="10" value="100" aria-labelledby="probAltitudeLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="probAltSigmaLabel" for="probAltSigmaSlider" title="Gaussian spread of flight altitude. Also stands in for ground roughness, multipath and tag orientation, not just bird behaviour.">Altitude spread (σ)</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="probAltSigmaValue" value="30" aria-label="Altitude spread standard deviation in metres">
+              <span class="range-value-unit">m</span>
+            </span>
+          </div>
+          <input type="range" id="probAltSigmaSlider" min="0" max="500" step="5" value="30" aria-labelledby="probAltSigmaLabel">
         </div>
         <div class="ctrl-row slider-row">
           <div class="range-head">
@@ -846,10 +860,10 @@
     </div>
 
     <div id="viewProb" hidden>
-      <section class="panel plot-panel plot-panel-wide" aria-label="Probability of detection by bearing and distance">
-        <div class="panel-title">Probability of detection &mdash; bearing &times; distance</div>
+      <section class="panel plot-panel plot-panel-wide" aria-label="Horizontal cross-section of detection probability at the selected altitude">
+        <div class="panel-title">Horizontal cross-section <span class="plot-sub">detection probability at the selected altitude</span></div>
         <div class="plot-body"><canvas id="probPolarCanvas"></canvas></div>
-        <div class="link-assumptions" style="padding:6px 0 0">Drag A, D or the line to move the flight path. Endpoints are modelled 20&nbsp;km out (effectively infinite), so only their bearings are set.</div>
+        <div class="link-assumptions" style="padding:6px 0 0">Drag A, D or the line to move the flight path across this slice; the heatmap below is its vertical section. Endpoints are modelled 20&nbsp;km out (effectively infinite), so only their bearings are set.</div>
         <div class="field-colorbar">
           <div class="field-colorbar-track"></div>
           <div class="field-colorbar-ticks"><span style="left:0%">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div>
@@ -1580,8 +1594,10 @@
     threshold: "p50",
     wire: false,
     rotate: false,
+    flightPaths: true,       // 3D: flight-path plane + altitude line, and the trajectory options panel with them
     prob: {
       altitudeM: 100,          // flight altitude above ground, 0-2000 m - drives the polar field and headline stats
+      altSigmaM: 30,           // std dev of the flight altitude, 0-500 m - probabilities are averaged over this spread
       intervalSec: 10,         // tag transmission interval, 1-60s
       speedKmh: 40,            // flight speed, 10-100 km/h
       approachBearingDeg: 270, // point A: compass bearing from antenna (drag on the polar view, or slider)
@@ -1783,6 +1799,72 @@
       vlbl.position.set(vAxisX-0.5, y, vAxisZ);
       rangeRingGroup.add(vlbl);
     });
+  }
+
+  // flight path in 3D: a translucent vertical plane under the approach-to-departure
+  // line (ground up to the flight altitude) and an opaque line at the flight altitude.
+  // Points use the dome's spherical mapping (sphPoint): a point at slant range S and
+  // elevation e sits at radiusForKm(S) along that elevation and bearing, so it lands
+  // inside the dome exactly when its range is inside the dome at that direction.
+  var flightGroup = new THREE.Group();
+  scene.add(flightGroup);
+  var flightKey = null;
+  var FLIGHT_SAMPLES = 48;
+
+  function flightScenePos(xKm, yKm, hKm){
+    var d = Math.hypot(xKm, yKm);
+    var r = radiusForKm(Math.hypot(d, hKm));   // slant range
+    var e = Math.atan2(hKm, d);                 // elevation above the horizon, radians
+    var brg = Math.atan2(xKm, yKm);             // compass bearing, radians: 0 = north, 90 = east
+    var ce = Math.cos(e);
+    return new THREE.Vector3(r*ce*Math.cos(brg), r*Math.sin(e), r*ce*Math.sin(brg));
+  }
+
+  function buildFlightPath(){
+    while (flightGroup.children.length){
+      var c = flightGroup.children.pop();
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) c.material.dispose();
+    }
+    var a = probPolarXY(state.prob.approachBearingDeg, PROB_GEOM_KM);
+    var b = probPolarXY(state.prob.departBearingDeg, PROB_GEOM_KM);
+    var altKm = state.prob.altitudeM/1000;
+    var accent = css("--accent") || "#548325";
+    var bottom = [], top = [];
+    for (var i=0; i<=FLIGHT_SAMPLES; i++){
+      var t = i/FLIGHT_SAMPLES;
+      var x = a[0] + t*(b[0]-a[0]), y = a[1] + t*(b[1]-a[1]);
+      bottom.push(flightScenePos(x, y, 0));
+      top.push(flightScenePos(x, y, altKm));
+    }
+
+    var pos = new Float32Array((FLIGHT_SAMPLES+1)*6);
+    var idx = [];
+    for (var j=0; j<=FLIGHT_SAMPLES; j++){
+      pos.set([bottom[j].x,bottom[j].y,bottom[j].z, top[j].x,top[j].y,top[j].z], j*6);
+      if (j < FLIGHT_SAMPLES){
+        var p0 = j*2, p1 = p0+1, p2 = p0+2, p3 = p0+3;
+        idx.push(p0,p2,p1, p1,p2,p3);
+      }
+    }
+    var surfGeo = new THREE.BufferGeometry();
+    surfGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    surfGeo.setIndex(idx);
+    var surfMat = new THREE.MeshBasicMaterial({ color:accent, transparent:true, opacity:0.22, side:THREE.DoubleSide, depthWrite:false });
+    var surf = new THREE.Mesh(surfGeo, surfMat);
+    surf.raycast = function(){};   // keep the dome tooltip's pointer picking unchanged
+
+    var line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(top), new THREE.LineBasicMaterial({ color:accent }));
+    flightGroup.add(surf, line);
+  }
+
+  // rebuilt only when a flight parameter changes, not every frame
+  function syncFlightPath(){
+    if (!flightGroup.visible) return;
+    var key = state.prob.approachBearingDeg+"|"+state.prob.departBearingDeg+"|"+state.prob.altitudeM;
+    if (key === flightKey) return;
+    flightKey = key;
+    buildFlightPath();
   }
 
   // ---------------------------------------------------------------- pattern mesh
@@ -2688,18 +2770,45 @@
     return detectionProb(rxDbm, combined.p50Grid[ti][pi], combined.p95Grid[ti][pi]);
   }
 
-  // path integral of per-pulse probability along F + s*e for s in [sStart, sEnd], probability*km
-  function probSegmentIntegral(combined, g, fx, fy, ex, ey, sStart, sEnd, altKm){
-    var steps = 140;
-    var ds = (sEnd - sStart)/steps;
-    if (!(ds > 0)) return 0;
-    var sum = 0;
-    for (var i=0; i<=steps; i++){
-      var s = sStart + i*ds;
-      var p = probPointP(combined, g, fx + s*ex, fy + s*ey, altKm);
-      sum += p * ((i===0 || i===steps) ? 0.5 : 1);
+  // flight altitude spread: average fn(altKm) over a Gaussian with std altSigmaM
+  // centred on the chosen altitude. Truncated at the ground and renormalised, so a
+  // low flight doesn't average in negative heights. Sampled every 0.75 sigma out to 3 sigma
+  // (kept coarse: this runs inside every probability evaluation and the redraw must stay responsive).
+  function probAltAveraged(altKm, fn){
+    var sigKm = state.prob.altSigmaM/1000;
+    if (!(sigKm > 0)) return fn(altKm);
+    var lo = Math.max(0, altKm - 3*sigKm), hi = altKm + 3*sigKm;
+    var n = 8, dz = (hi-lo)/n;
+    var sw = 0, s = 0;
+    for (var i=0; i<=n; i++){
+      var z = lo + i*dz;
+      var u = (z-altKm)/sigKm;
+      var w = Math.exp(-0.5*u*u) * ((i===0 || i===n) ? 0.5 : 1);
+      sw += w; s += w*fn(z);
     }
-    return sum*ds;
+    return s/sw;
+  }
+
+  // per-pulse probability at a point, averaged over the altitude spread
+  function probPointPAvg(combined, g, x, y, altKm){
+    return probAltAveraged(altKm, function(a){ return probPointP(combined, g, x, y, a); });
+  }
+
+  // path integral of per-pulse probability along F + s*e for s in [sStart, sEnd], probability*km.
+  // Averaging the integral over altitude is the same as averaging the probability first.
+  function probSegmentIntegral(combined, g, fx, fy, ex, ey, sStart, sEnd, altKm){
+    return probAltAveraged(altKm, function(a){
+      var steps = 140;
+      var ds = (sEnd - sStart)/steps;
+      if (!(ds > 0)) return 0;
+      var sum = 0;
+      for (var i=0; i<=steps; i++){
+        var s = sStart + i*ds;
+        var p = probPointP(combined, g, fx + s*ex, fy + s*ey, a);
+        sum += p * ((i===0 || i===steps) ? 0.5 : 1);
+      }
+      return sum*ds;
+    });
   }
 
   // a tangential pass at closest-approach distance Rkm and bearing bearingDeg, used for the polar field
@@ -2762,16 +2871,6 @@
     var nexp = integralVal / probDsKm();
     return { nexp: nexp, ptotal: 1 - Math.exp(-nexp) };
   }
-  function probThetaIndex(bearingDeg){
-    var n = (probField && probField.nTheta) || PROB_N_THETA;
-    return Math.round((((bearingDeg%360)+360)%360) / (360/n)) % n;
-  }
-  function probRIndex(distanceKm){
-    var nR = (probField && probField.nR) || PROB_N_R;
-    var maxKm = (probField && probField.maxRangeKm) || PROB_MAX_RANGE_KM;
-    return Math.max(0, Math.min(nR-1, Math.floor(distanceKm/maxKm*nR)));
-  }
-
   // same five colours and stop positions as the signal-strength field ramp
   // (FIELD_STOPS on a linear dBm scale, -140..-70), so every heatmap reads alike
   var PROB_STOPS = [
@@ -2823,7 +2922,7 @@
     probPolarView = null;
     if (!probField) return;
     var cx = w/2, cy = h/2, R = Math.max(10, Math.min(w,h)/2 - 22);
-    var ds = probDsKm();
+    var altKm = state.prob.altitudeM/1000;
     var rangeKm = probDisplayRangeKm();
 
     // coarse grid + fillRect, same perf pattern as drawFieldPlot's range x
@@ -2838,12 +2937,8 @@
         var dx = px-cx, dy = py-cy;
         var rpx = Math.hypot(dx,dy);
         if (rpx > R) continue;
-        var distKm = rpx/R*rangeKm;
-        var bearingDeg = ((Math.atan2(dy,dx)*180/Math.PI)+90+360)%360;
-        var ti = probThetaIndex(bearingDeg), ri = probRIndex(distKm);
-        var nexp = probField.integral[ti][ri]/ds;
-        var ptotal = 1-Math.exp(-nexp);
-        var col = probColorFor(ptotal);
+        // horizontal slice at the selected altitude: per-pulse probability at this point (east x, north y)
+        var col = probColorFor(probPointPAvg(probField.combined, probField.geom, dx/R*rangeKm, -dy/R*rangeKm, altKm));
         ctx.fillStyle = "rgb("+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0)+")";
         ctx.fillRect(px-cellW/2, py-cellH/2, cellW+0.6, cellH+0.6);
       }
@@ -2945,7 +3040,7 @@
       for (var si=0; si<PROB_LINE_NS; si++){
         var sKm = xMin + (si+0.5)/PROB_LINE_NS*xSpan;
         if (sKm < geo.sMin || sKm > geo.sMax) continue;
-        var p = probPointP(combined, g, geo.fx + sKm*geo.ex, geo.fy + sKm*geo.ey, altKm);
+        var p = probPointPAvg(combined, g, geo.fx + sKm*geo.ex, geo.fy + sKm*geo.ey, altKm);
         var col = probColorFor(p);
         ctx.fillStyle = "rgb("+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0)+")";
         ctx.fillRect(padL+si*cellW, y0, cellW+0.6, cellH+0.6);
@@ -3111,7 +3206,7 @@
     hintBar.hidden = v !== "3d";
     glHost2.hidden = v !== "2d";
     glHost3.hidden = v !== "prob";
-    probPanel.hidden = v !== "prob";
+    syncProbPanel();
     tooltip.hidden = true;
     redrawViewIfNeeded();
   }
@@ -3204,6 +3299,7 @@
   var asInt = function(v){ return parseInt(v,10); };
   var fmtInt = function(v){ return String(v); };
   wireProbRangeControl("probAltitudeSlider", "probAltitudeValue", "altitudeM", asInt, fmtInt, true);
+  wireProbRangeControl("probAltSigmaSlider", "probAltSigmaValue", "altSigmaM", asInt, fmtInt, true);
   wireProbRangeControl("probIntervalSlider", "probIntervalValue", "intervalSec", asInt, fmtInt, false);
   wireProbRangeControl("probSpeedSlider", "probSpeedValue", "speedKmh", asInt, fmtInt, false);
   wireProbRangeControl("probApproachBearingSlider", "probApproachBearingValue", "approachBearingDeg", function(v){ return wrapDeg(parseInt(v,10)); }, fmtInt, false);
@@ -3347,6 +3443,20 @@
     state.rotate = rotateToggle.checked;
     controls.autoRotate = state.rotate;
   });
+
+  // trajectory options show with the flight paths in 3D, and always on the detection-probability tab
+  function syncProbPanel(){
+    probPanel.hidden = !(state.view === "prob" || (state.view === "3d" && state.flightPaths));
+  }
+  var flightPathToggle = document.getElementById("flightPathToggle");
+  flightPathToggle.checked = state.flightPaths;
+  flightGroup.visible = state.flightPaths;
+  flightPathToggle.addEventListener("change", function(){
+    state.flightPaths = flightPathToggle.checked;
+    flightGroup.visible = state.flightPaths;
+    syncProbPanel();
+  });
+  syncProbPanel();
 
   function refreshLegend(){
     var ticksEl = document.getElementById("legendTicks");
@@ -3747,7 +3857,7 @@
   var MODEL_META = {};
   var MODEL_FREQ = {};   // model key -> freqMhz (one frequency per model, all pols/envs)
   var FREQ_ORDER = [];   // distinct freqMhz values across all models, ascending
-  var MODEL_ABBR = { plc1669: "PLC1669", zda433: "ZDA433", wa5vjb_yagi: "WA5VJB", hg2412p: "HG2412P", zdaqj166: "ZDAQJ166" };
+  var MODEL_ABBR = { plc1669: "PLC1669", zda433: "ZDA433", wa5vjb_yagi: "WA5VJB", hg2412p: "HG2412P", zdaqj166: "ZDAQJ166", dx_9el_yagi: "DX9EL" };
   var POL_META_LABEL = { horizontal: "H-pol", vertical: "V-pol", circular: "CP" };
 
   // builds the terrain roster once at boot. Terrain/ground is shared by
@@ -4573,6 +4683,7 @@
     // instantly, mid-morph frames just jump to their end state on return)
     if (state.view !== "3d") return;
     if (morphing) stepMorph(now||performance.now());
+    syncFlightPath();
     controls.update();
     updateTooltip();
     renderer.render(scene, camera);
