@@ -1,7 +1,9 @@
 <meta charset="UTF-8">
 <title>PLC1669 Radiation Patterns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/shared/motus-tools.css">
 <style>
   :root{
     --bg:#eef1f4;
@@ -12,9 +14,9 @@
     --text:#111620;
     --text-muted:#5a6472;
     --hairline:#c7d0d9;
-    --accent:#a8481a;
+    --accent:var(--motus-primary, #a8481a);
     --accent-ink:#ffffff;
-    --accent-soft:#f2ddc9;
+    --accent-soft:color-mix(in srgb, var(--motus-primary, #a8481a) 15%, white);
     --focus:#2f6fed;
     --grid-line:#9aa5b1;
   }
@@ -28,9 +30,9 @@
       --text:#e9edf4;
       --text-muted:#8d96a6;
       --hairline:#2b3446;
-      --accent:#e58a45;
-      --accent-ink:#1a0e04;
-      --accent-soft:#3a2a18;
+      --accent:var(--motus-primary, #e58a45);
+      --accent-ink:#ffffff;
+      --accent-soft:color-mix(in srgb, var(--motus-primary, #e58a45) 30%, black);
       --focus:#6ea3ff;
       --grid-line:#3a4457;
     }
@@ -44,9 +46,9 @@
     --text:#e9edf4;
     --text-muted:#8d96a6;
     --hairline:#2b3446;
-    --accent:#e58a45;
-    --accent-ink:#1a0e04;
-    --accent-soft:#3a2a18;
+    --accent:var(--motus-primary, #e58a45);
+    --accent-ink:#ffffff;
+    --accent-soft:color-mix(in srgb, var(--motus-primary, #e58a45) 30%, black);
     --focus:#6ea3ff;
     --grid-line:#3a4457;
   }
@@ -57,14 +59,19 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+    font-family:var(--motus-font,"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif);
     overflow:hidden;
+    display:flex;
+    flex-direction:column;
   }
   .mono{ font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace; }
 
+  .motus-header, .tool-footer{ flex:0 0 auto; }
+
   .app{
-    position:fixed;
-    inset:0;
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
     padding-top:env(safe-area-inset-top,0px);
     padding-bottom:env(safe-area-inset-bottom,0px);
     display:flex;
@@ -187,7 +194,7 @@
     border:1px solid var(--hairline);
     background:var(--surface-2);
     color:var(--text);
-    font-family:"IBM Plex Sans",sans-serif;
+    font-family:var(--motus-font,"IBM Plex Sans",sans-serif);
     font-size:12px;
     font-weight:500;
     cursor:pointer;
@@ -216,7 +223,7 @@
     border:1px solid var(--hairline);
     background:var(--surface-2);
     color:var(--text);
-    font-family:"IBM Plex Sans",sans-serif;
+    font-family:var(--motus-font,"IBM Plex Sans",sans-serif);
     font-size:11.5px;
     font-weight:500;
     cursor:pointer;
@@ -258,15 +265,15 @@
   .range-head{ display:flex; align-items:baseline; justify-content:space-between; }
   .range-value{ font-size:12px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
   .range-value-wrap{ display:flex; align-items:baseline; gap:3px; }
-  .range-value-input{
+  input.range-value-input{
     font-family:inherit; font-size:12px; font-weight:600; color:var(--text);
     font-variant-numeric:tabular-nums; text-align:right;
     width:3.4em; padding:0 1px 1px; margin:0;
     background:transparent; border:none; border-bottom:1px dashed var(--text-muted);
     border-radius:0;
   }
-  .range-value-input:hover{ border-bottom-color:var(--text); }
-  .range-value-input:focus{ outline:none; border-bottom:1px solid var(--accent); }
+  input.range-value-input:hover{ border-bottom-color:var(--text); }
+  input.range-value-input:focus{ outline:none; border-bottom:1px solid var(--accent); }
   .range-value-unit{ font-size:12px; font-weight:600; color:var(--text); }
   input[type="range"]{
     -webkit-appearance:none; appearance:none;
@@ -444,7 +451,7 @@
     .hint{ display:none; }
   }
 
-  #view2d{
+  #view2d, #viewProb{
     position:absolute;
     inset:16px 16px 16px calc(272px + 32px);
     display:flex;
@@ -487,7 +494,7 @@
   .field-colorbar-ticks span b{ display:block; color:var(--text); font-weight:600; font-size:9.5px; }
 
   @media (max-width:760px){
-    #view2d{ inset:10px 10px calc(46vh + 16px) 10px; }
+    #view2d, #viewProb{ inset:10px 10px calc(46vh + 16px) 10px; }
     .plot-panel{ height:220px; }
     .view-toggle .seg-btn{ padding:6px 9px; font-size:11px; }
   }
@@ -589,6 +596,7 @@
     <div class="seg-group view-toggle" role="group" aria-label="View mode">
       <button type="button" class="seg-btn" id="view3dBtn" aria-pressed="true">3D dome</button>
       <button type="button" class="seg-btn" id="view2dBtn" aria-pressed="false">2D plots</button>
+      <button type="button" class="seg-btn" id="viewProbBtn" aria-pressed="false">Detection probability</button>
     </div>
   </header>
 
@@ -762,6 +770,61 @@
           <label class="switch"><input type="checkbox" id="rotateToggle"><span class="track"></span><span class="thumb"></span></label>
         </div>
       </section>
+
+      <section class="panel" aria-label="Flight trajectory" id="probPanel" hidden>
+        <div class="panel-title">Trajectory</div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="probAltitudeLabel" for="probAltitudeSlider">Flight altitude (polar &amp; stats)</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="probAltitudeValue" value="100" aria-label="Flight altitude in metres">
+              <span class="range-value-unit">m</span>
+            </span>
+          </div>
+          <input type="range" id="probAltitudeSlider" min="0" max="2000" step="10" value="100" aria-labelledby="probAltitudeLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="probIntervalLabel" for="probIntervalSlider">Transmission interval</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="probIntervalValue" value="10" aria-label="Transmission interval in seconds">
+              <span class="range-value-unit">s</span>
+            </span>
+          </div>
+          <input type="range" id="probIntervalSlider" min="1" max="60" step="1" value="10" aria-labelledby="probIntervalLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="probSpeedLabel" for="probSpeedSlider">Flight speed</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="probSpeedValue" value="40" aria-label="Flight speed in kilometers per hour">
+              <span class="range-value-unit">km/h</span>
+            </span>
+          </div>
+          <input type="range" id="probSpeedSlider" min="10" max="100" step="1" value="40" aria-labelledby="probSpeedLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="probApproachBearingLabel" for="probApproachBearingSlider">Approach bearing</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="probApproachBearingValue" value="270" aria-label="Approach point bearing in degrees">
+              <span class="range-value-unit">&deg;</span>
+            </span>
+          </div>
+          <input type="range" id="probApproachBearingSlider" min="0" max="359" step="1" value="270" aria-labelledby="probApproachBearingLabel">
+        </div>
+        <div class="ctrl-row slider-row">
+          <div class="range-head">
+            <label id="probDepartBearingLabel" for="probDepartBearingSlider">Departure bearing</label>
+            <span class="range-value-wrap mono">
+              <input type="text" inputmode="numeric" class="range-value-input" id="probDepartBearingValue" value="45" aria-label="Departure point bearing in degrees">
+              <span class="range-value-unit">&deg;</span>
+            </span>
+          </div>
+          <input type="range" id="probDepartBearingSlider" min="0" max="359" step="1" value="45" aria-labelledby="probDepartBearingLabel">
+        </div>
+        <div class="link-assumptions" style="padding:6px 0 0">Continuous per-pulse detection probability from the tag profile&rsquo;s own 50%/95% thresholds &mdash; independent of the Receiver sensitivity tier buttons above.</div>
+      </section>
     </div>
 
     <div class="legend panel" id="legendPanel" aria-hidden="true">
@@ -780,6 +843,55 @@
 
     <div id="view2d" hidden>
       <div id="view2dEmpty" hidden>No antennas enabled &mdash; enable at least one antenna to see its plots.</div>
+    </div>
+
+    <div id="viewProb" hidden>
+      <section class="panel plot-panel plot-panel-wide" aria-label="Probability of detection by bearing and distance">
+        <div class="panel-title">Probability of detection &mdash; bearing &times; distance</div>
+        <div class="plot-body"><canvas id="probPolarCanvas"></canvas></div>
+        <div class="link-assumptions" style="padding:6px 0 0">Drag A, D or the line to move the flight path. Endpoints are modelled 20&nbsp;km out (effectively infinite), so only their bearings are set.</div>
+        <div class="field-colorbar">
+          <div class="field-colorbar-track"></div>
+          <div class="field-colorbar-ticks"><span style="left:0%">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div>
+        </div>
+      </section>
+      <section class="panel plot-panel plot-panel-wide" aria-label="Probability of detection along the flight line by altitude">
+        <div class="panel-title">Probability along flight line<span class="plot-sub">altitude &times; along-track position &middot; click or drag to set altitude</span></div>
+        <div class="plot-body"><canvas id="probLineCanvas"></canvas></div>
+        <div class="field-colorbar">
+          <div class="field-colorbar-track"></div>
+          <div class="field-colorbar-ticks"><span style="left:0%">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div>
+        </div>
+      </section>
+      <section class="panel plot-panel plot-panel-wide" aria-label="Likely number of detections by transmission interval and flight speed">
+        <div class="panel-title">Likely number of detections<span class="plot-sub">transmission interval &times; flight speed, at the selected altitude &middot; click or drag to set both</span></div>
+        <div class="plot-body"><canvas id="probIntervalSpeedCanvas"></canvas></div>
+        <div class="field-colorbar">
+          <div class="field-colorbar-track"></div>
+          <div class="field-colorbar-ticks"><span style="left:0%">0</span><span style="left:10%"><b>2</b>low</span><span style="left:50%"><b>10</b>high</span><span style="left:100%;transform:translateX(-100%)">20+</span></div>
+        </div>
+      </section>
+      <section class="panel plot-panel plot-panel-wide" aria-label="Selected trajectory statistics" style="height:auto">
+        <div class="panel-title">Selected trajectory</div>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="k">P(&ge;1 detection)</div>
+            <div class="v mono" id="probStatSelP">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Likely number of detections</div>
+            <div class="v mono" id="probStatSelN">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Closest approach</div>
+            <div class="v mono" id="probStatClosest">&mdash;</div>
+          </div>
+          <div class="stat">
+            <div class="k">Area-averaged P(detection)</div>
+            <div class="v mono" id="probStatArea">&mdash;</div>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 </div>
@@ -941,6 +1053,21 @@
   function instanceThresholdDbm(instance){
     var profile = TAG_PROFILES[instance.model] || TAG_PROFILES.plc1669;
     return thresholdDbmFor(profile, state.threshold);
+  }
+
+  // continuous per-pulse detection probability, for the Detection probability
+  // tab - a logistic curve through each tag profile's own calibrated p50/p95
+  // thresholdDbmFor() points (same ones the 3D dome's threshold buttons use),
+  // rather than the single hard threshold those buttons pick. p95-p50 sets
+  // the curve's steepness (ln(0.95/0.05)=ln(19) solves the logistic for
+  // p(p95Dbm)=0.95 given p(p50Dbm)=0.5), so a tag profile with a narrow
+  // p50-p95 gap (e.g. zda433's 1 dB FSK-correlator margin) gets a much
+  // steeper/cliff-like curve than one with a wide gap (plc1669's 3 dB PPM
+  // edge-timing margin) - consistent with how those tiers were calibrated.
+  function detectionProb(rxDbm, p50Dbm, p95Dbm){
+    var span = Math.max(0.5, p95Dbm - p50Dbm);
+    var k = Math.log(19) / span;
+    return 1 / (1 + Math.exp(-k * (rxDbm - p50Dbm)));
   }
 
   // ---- live ground-reflection model (Option A): rather than needing a
@@ -1452,7 +1579,14 @@
     noise: -105,
     threshold: "p50",
     wire: false,
-    rotate: false
+    rotate: false,
+    prob: {
+      altitudeM: 100,          // flight altitude above ground, 0-2000 m - drives the polar field and headline stats
+      intervalSec: 10,         // tag transmission interval, 1-60s
+      speedKmh: 40,            // flight speed, 10-100 km/h
+      approachBearingDeg: 270, // point A: compass bearing from antenna (drag on the polar view, or slider)
+      departBearingDeg: 45     // point D: compass bearing from antenna (drag on the polar view, or slider)
+    }
   };
 
   function makeAntennaInstance(model, polarization){
@@ -1947,8 +2081,14 @@
     if (!units.length) return null;
     var nTc = canon.elevDeg.length, nPc = canon.phiDeg.length;
     var gainGrid = new Array(nTc), eirpGrid = new Array(nTc), freqGrid = new Array(nTc), threshGrid = new Array(nTc);
+    // p50Grid/p95Grid: the winning unit's own calibrated detection-probability
+    // points (see detectionProb()) - independent of state.threshold, so the
+    // Detection probability tab's continuous curve doesn't depend on which
+    // single tier the 3D dome's threshold buttons currently have selected.
+    var p50Grid = new Array(nTc), p95Grid = new Array(nTc);
     for (var ti=0; ti<nTc; ti++){
       gainGrid[ti]=new Array(nPc); eirpGrid[ti]=new Array(nPc); freqGrid[ti]=new Array(nPc); threshGrid[ti]=new Array(nPc);
+      p50Grid[ti]=new Array(nPc); p95Grid[ti]=new Array(nPc);
       for (var pi=0; pi<nPc; pi++){
         var bestMargin = -Infinity, bu = units[0];
         for (var ui=0; ui<units.length; ui++){
@@ -1960,9 +2100,11 @@
         eirpGrid[ti][pi] = bu.eirpDbm;
         freqGrid[ti][pi] = bu.freqMhz;
         threshGrid[ti][pi] = bu.thresholdDbm;
+        p50Grid[ti][pi] = thresholdDbmFor(bu.profile, "p50");
+        p95Grid[ti][pi] = thresholdDbmFor(bu.profile, "p95");
       }
     }
-    return { elevDeg: canon.elevDeg, phiDeg: canon.phiDeg, gainGrid: gainGrid, eirpGrid: eirpGrid, freqGrid: freqGrid, threshGrid: threshGrid, units: units };
+    return { elevDeg: canon.elevDeg, phiDeg: canon.phiDeg, gainGrid: gainGrid, eirpGrid: eirpGrid, freqGrid: freqGrid, threshGrid: threshGrid, p50Grid: p50Grid, p95Grid: p95Grid, units: units };
   }
 
   function gridAllEqual(grid, nTc, nPc){
@@ -2079,7 +2221,7 @@
 
     var textColor = css("--text-muted") || "#8d96a6";
     var lineColor = css("--grid-line") || "#9aa5b1";
-    var accent = css("--accent") || "#a8481a";
+    var accent = css("--accent") || "#548325";
     ctx.font = "10px 'IBM Plex Mono', monospace";
     ctx.lineWidth = 1;
 
@@ -2150,7 +2292,7 @@
 
     var textColor = css("--text-muted") || "#8d96a6";
     var lineColor = css("--grid-line") || "#9aa5b1";
-    var accent = css("--accent") || "#a8481a";
+    var accent = css("--accent") || "#548325";
     ctx.font = "10px 'IBM Plex Mono', monospace";
 
     ctx.strokeStyle = lineColor;
@@ -2234,7 +2376,7 @@
     ctx.globalAlpha = 1;
 
     var altSteps = Math.max(40, Math.min(200, Math.round(plotH)));
-    var accent = css("--accent") || "#a8481a";
+    var accent = css("--accent") || "#548325";
     ctx.strokeStyle = accent;
     ctx.lineWidth = 1.75;
     ctx.beginPath();
@@ -2479,24 +2621,510 @@
     refreshDome();
   }
 
+  // ---------------------------------------------------------------- Detection probability view
+  // A tagged animal flies the straight segment from approach point A to
+  // departure point D, both placed by compass bearing from the antenna, at a far
+  // radius standing in for infinity (x=east, y=north). The closest approach F is the foot of the
+  // perpendicular from the antenna onto that line; along-track position s is
+  // measured from F in the direction of travel. Per tag pulse, detectionProb()
+  // gives a continuous probability from the received power (calibrated off
+  // each tag profile's p50/p95). Its path integral along the flight, in
+  // probability*km, is rescaled by the speed/interval sliders into an expected
+  // detection count (Nexp = integral/dsPulse, Ptotal = 1-exp(-Nexp)).
+  var PROB_N_THETA = 48;          // polar bearing buckets, 7.5 deg each
+  var PROB_N_R = 40;              // polar closest-approach-distance buckets
+  var PROB_LINE_NS = 90;          // along-track columns in the flight heatmap
+  var PROB_LINE_NH = 40;          // altitude rows in the flight heatmap
+  var PROB_LINE_MAX_ALT_KM = 2;
+  var PROB_MAX_RANGE_KM = AXIS_MAX_KM;
+  var PROB_AUTO_PROBE_R_KM = [0.25,0.5,1,1.5,2,3,4,6,8,10,13,16,20];
+  var PROB_AUTO_MIN_RANGE_KM = 1;
+
+  var probField = null;        // { nTheta, nR, maxRangeKm, integral[ti][ri], combined, geom } at state.prob.altitudeM
+  var probFieldDirty = true;   // cleared by rebuildProbField(); set by refreshDome() and altitude changes
+
+  function probPolarXY(bearingDeg, distKm){
+    var rad = bearingDeg*Math.PI/180;
+    return [distKm*Math.sin(rad), distKm*Math.cos(rad)];
+  }
+
+  // Endpoints are placed on their bearing rays at PROB_GEOM_KM. A truly infinite
+  // distance has no finite closest approach unless the two bearings are opposite,
+  // so this far radius stands in for infinity (detection beyond it is negligible).
+  var PROB_GEOM_KM = AXIS_MAX_KM;
+
+  function probFlightGeometry(){
+    var a = probPolarXY(state.prob.approachBearingDeg, PROB_GEOM_KM);
+    var b = probPolarXY(state.prob.departBearingDeg, PROB_GEOM_KM);
+    var dx = b[0]-a[0], dy = b[1]-a[1];
+    var len = Math.hypot(dx, dy);
+    if (len < 1e-6) return null;
+    var ex = dx/len, ey = dy/len;
+    var along = a[0]*ex + a[1]*ey;
+    var fx = a[0]-along*ex, fy = a[1]-along*ey;
+    return {
+      ax: a[0], ay: a[1], bx: b[0], by: b[1],
+      ex: ex, ey: ey, fx: fx, fy: fy,
+      sMin: along, sMax: b[0]*ex + b[1]*ey,
+      closestKm: Math.hypot(fx, fy),
+      closestBearingDeg: (Math.atan2(fx, fy)*180/Math.PI + 360) % 360
+    };
+  }
+
+  function probGeom(combined){
+    var nTc = combined.elevDeg.length, nPc = combined.phiDeg.length;
+    var elMin = combined.elevDeg[0];
+    return { nTc: nTc, nPc: nPc, elMin: elMin, elStep: (combined.elevDeg[nTc-1]-elMin)/(nTc-1), phiStep: 360/nPc };
+  }
+
+  function probPointP(combined, g, x, y, altKm){
+    var r = Math.hypot(x, y);
+    var bDeg = (Math.atan2(x, y)*180/Math.PI + 360) % 360;
+    var elevDeg = Math.atan2(altKm, Math.max(r, 1e-6))*180/Math.PI;
+    var ti = Math.max(0, Math.min(g.nTc-1, Math.round((elevDeg-g.elMin)/g.elStep)));
+    var pi = Math.round(bDeg/g.phiStep) % g.nPc;
+    var slantKm = Math.max(Math.hypot(r, altKm), 1e-3);
+    var rxDbm = combined.eirpGrid[ti][pi] + combined.gainGrid[ti][pi] - fsplDb(slantKm, combined.freqGrid[ti][pi]);
+    return detectionProb(rxDbm, combined.p50Grid[ti][pi], combined.p95Grid[ti][pi]);
+  }
+
+  // path integral of per-pulse probability along F + s*e for s in [sStart, sEnd], probability*km
+  function probSegmentIntegral(combined, g, fx, fy, ex, ey, sStart, sEnd, altKm){
+    var steps = 140;
+    var ds = (sEnd - sStart)/steps;
+    if (!(ds > 0)) return 0;
+    var sum = 0;
+    for (var i=0; i<=steps; i++){
+      var s = sStart + i*ds;
+      var p = probPointP(combined, g, fx + s*ex, fy + s*ey, altKm);
+      sum += p * ((i===0 || i===steps) ? 0.5 : 1);
+    }
+    return sum*ds;
+  }
+
+  // a tangential pass at closest-approach distance Rkm and bearing bearingDeg, used for the polar field
+  function probTangentIntegral(combined, g, bearingDeg, Rkm, altKm){
+    var rad = bearingDeg*Math.PI/180;
+    var sinB = Math.sin(rad), cosB = Math.cos(rad);
+    var Smax = Math.max(8, Rkm*3 + 5);
+    return probSegmentIntegral(combined, g, Rkm*sinB, Rkm*cosB, cosB, -sinB, -Smax, Smax, altKm);
+  }
+
+  // cheap pre-pass: probe a handful of tangential passes at the most favorable
+  // pulse spacing (fastest flight, shortest interval) to find how far out
+  // detection is ever non-negligible, so the polar plot can zoom to that range
+  function estimateAutoMaxRangeKm(combined, g, altKm){
+    var dsBest = (100/3600)*1;
+    var epsNexp = 0.02;
+    var maxUseful = PROB_AUTO_MIN_RANGE_KM;
+    for (var bi=0; bi<PROB_N_THETA; bi++){
+      var bearingDeg = bi*(360/PROB_N_THETA);
+      for (var pi=0; pi<PROB_AUTO_PROBE_R_KM.length; pi++){
+        var Rkm = PROB_AUTO_PROBE_R_KM[pi];
+        if (probTangentIntegral(combined, g, bearingDeg, Rkm, altKm)/dsBest >= epsNexp) maxUseful = Math.max(maxUseful, Rkm);
+      }
+    }
+    return Math.max(PROB_AUTO_MIN_RANGE_KM, Math.min(AXIS_MAX_KM, maxUseful*1.25));
+  }
+
+  function rebuildProbField(){
+    var combined = computeCombinedResult();
+    if (!combined){ probField = null; return; }
+    var g = probGeom(combined);
+    var altKm = state.prob.altitudeM/1000;
+    var maxRangeKm = estimateAutoMaxRangeKm(combined, g, altKm);
+    var integral = new Array(PROB_N_THETA);
+    for (var ti=0; ti<PROB_N_THETA; ti++){
+      var bearingDeg = ti*(360/PROB_N_THETA);
+      var row = new Array(PROB_N_R);
+      for (var ri=0; ri<PROB_N_R; ri++){
+        var Rkm = (ri+0.5)/PROB_N_R*maxRangeKm;
+        row[ri] = probTangentIntegral(combined, g, bearingDeg, Rkm, altKm);
+      }
+      integral[ti] = row;
+    }
+    probField = { nTheta: PROB_N_THETA, nR: PROB_N_R, maxRangeKm: maxRangeKm, integral: integral, combined: combined, geom: g };
+  }
+
+  // polar radius: the detectable zone, widened just enough to keep the flight
+  // line's closest point inside the view (so the line and its handles stay visible)
+  function probDisplayRangeKm(){
+    var fieldKm = probField ? probField.maxRangeKm : PROB_MAX_RANGE_KM;
+    var geo = probFlightGeometry();
+    var closestKm = geo ? geo.closestKm : 0;
+    return Math.min(AXIS_MAX_KM, Math.max(fieldKm, closestKm*1.15, 1));
+  }
+
+  // km flown between tag transmissions - the only two inputs (speed/interval)
+  // that rescale the already-computed path integral into an expected count
+  function probDsKm(){ return Math.max(1e-6, (state.prob.speedKmh/3600) * state.prob.intervalSec); }
+  function probStatsFromIntegral(integralVal){
+    var nexp = integralVal / probDsKm();
+    return { nexp: nexp, ptotal: 1 - Math.exp(-nexp) };
+  }
+  function probThetaIndex(bearingDeg){
+    var n = (probField && probField.nTheta) || PROB_N_THETA;
+    return Math.round((((bearingDeg%360)+360)%360) / (360/n)) % n;
+  }
+  function probRIndex(distanceKm){
+    var nR = (probField && probField.nR) || PROB_N_R;
+    var maxKm = (probField && probField.maxRangeKm) || PROB_MAX_RANGE_KM;
+    return Math.max(0, Math.min(nR-1, Math.floor(distanceKm/maxKm*nR)));
+  }
+
+  // same five colours and stop positions as the signal-strength field ramp
+  // (FIELD_STOPS on a linear dBm scale, -140..-70), so every heatmap reads alike
+  var PROB_STOPS = [
+    [0, [30,34,36]], [2/7, [28,93,110]], [0.5, [163,133,42]],
+    [9/14, [193,91,42]], [1, [230,175,90]]
+  ];
+  function probColorFor(p){
+    p = Math.max(0, Math.min(1, p));
+    for (var i=0;i<PROB_STOPS.length-1;i++){
+      var a=PROB_STOPS[i], b=PROB_STOPS[i+1];
+      if (p>=a[0] && p<=b[0]){
+        var f=(p-a[0])/(b[0]-a[0]);
+        return [a[1][0]+(b[1][0]-a[1][0])*f, a[1][1]+(b[1][1]-a[1][1])*f, a[1][2]+(b[1][2]-a[1][2])*f];
+      }
+    }
+    return PROB_STOPS[PROB_STOPS.length-1][1];
+  }
+
+  // bearing->screen angle convention matches drawAzimuthPlot(): 0deg at top, clockwise
+  function probBearingToXY(cx, cy, r, bearingDeg){
+    var rad = (bearingDeg-90)*Math.PI/180;
+    return [cx+Math.cos(rad)*r, cy+Math.sin(rad)*r];
+  }
+
+  function probTickLabel(v, step){ return v.toFixed(step < 1 ? 2 : 0); }
+
+  // last polar layout and the on-screen ends of the visible flight segment,
+  // read by the pointer handlers in the trajectory controls block
+  var probPolarView = null;
+
+  // parameter range [t0,t1] of the segment a + t(b-a) inside a disk of radius r, clamped to [0,1]; null if none
+  function probClipSegment(a, b, r){
+    var dx = b[0]-a[0], dy = b[1]-a[1];
+    var A = dx*dx + dy*dy;
+    if (A < 1e-12) return null;
+    var B = a[0]*dx + a[1]*dy;
+    var C = a[0]*a[0] + a[1]*a[1] - r*r;
+    var disc = B*B - A*C;
+    if (disc < 0) return null;
+    var sq = Math.sqrt(disc);
+    var t0 = Math.max(0, (-B - sq)/A), t1 = Math.min(1, (-B + sq)/A);
+    return t0 <= t1 ? [t0, t1] : null;
+  }
+
+  function drawProbPolar(canvasId){
+    var c = setupCanvas(document.getElementById(canvasId || "probPolarCanvas"));
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0,0,w,h);
+    probPolarView = null;
+    if (!probField) return;
+    var cx = w/2, cy = h/2, R = Math.max(10, Math.min(w,h)/2 - 22);
+    var ds = probDsKm();
+    var rangeKm = probDisplayRangeKm();
+
+    // coarse grid + fillRect, same perf pattern as drawFieldPlot's range x
+    // altitude heatmap, rather than a full per-pixel ImageData loop
+    var cols = Math.max(20, Math.min(160, Math.round(w/4)));
+    var rows = Math.max(20, Math.min(160, Math.round(h/4)));
+    var cellW = w/cols, cellH = h/rows;
+    for (var ry=0; ry<rows; ry++){
+      var py = (ry+0.5)*cellH;
+      for (var rx=0; rx<cols; rx++){
+        var px = (rx+0.5)*cellW;
+        var dx = px-cx, dy = py-cy;
+        var rpx = Math.hypot(dx,dy);
+        if (rpx > R) continue;
+        var distKm = rpx/R*rangeKm;
+        var bearingDeg = ((Math.atan2(dy,dx)*180/Math.PI)+90+360)%360;
+        var ti = probThetaIndex(bearingDeg), ri = probRIndex(distKm);
+        var nexp = probField.integral[ti][ri]/ds;
+        var ptotal = 1-Math.exp(-nexp);
+        var col = probColorFor(ptotal);
+        ctx.fillStyle = "rgb("+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0)+")";
+        ctx.fillRect(px-cellW/2, py-cellH/2, cellW+0.6, cellH+0.6);
+      }
+    }
+
+    var textColor = css("--text-muted") || "#8d96a6";
+    var lineColor = css("--grid-line") || "#9aa5b1";
+    var accent = css("--accent") || "#548325";
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.lineWidth = 1;
+
+    var rangeStep = niceAxisStep(rangeKm, 5);
+    for (var k=1; k*rangeStep<=rangeKm+1e-9; k++){
+      var rv = k*rangeStep;
+      var rr = rv/rangeKm*R;
+      ctx.beginPath(); ctx.arc(cx,cy,rr,0,Math.PI*2);
+      ctx.strokeStyle = lineColor; ctx.globalAlpha = 0.3; ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = textColor; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillText(probTickLabel(rv, rangeStep)+"km", cx+3, cy-rr-2);
+    }
+    for (var d=0; d<360; d+=30){
+      var rad = (d-90)*Math.PI/180;
+      var p0 = probBearingToXY(cx,cy,0,d), p1 = probBearingToXY(cx,cy,R,d);
+      ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]);
+      ctx.strokeStyle = lineColor; ctx.globalAlpha = 0.22; ctx.stroke(); ctx.globalAlpha = 1;
+      var lp = probBearingToXY(cx,cy,R+12,d);
+      ctx.fillStyle = textColor;
+      ctx.textAlign = Math.abs(Math.cos(rad))<0.2 ? "center" : (Math.cos(rad)>0?"left":"right");
+      ctx.textBaseline = Math.abs(Math.sin(rad))<0.2 ? "middle" : (Math.sin(rad)>0?"top":"bottom");
+      ctx.fillText(d+"°", lp[0], lp[1]);
+    }
+
+    var geo = probFlightGeometry();
+    if (!geo) return;
+    // km (x east, y north) -> screen
+    function toXY(x, y){ return [cx + x/rangeKm*R, cy - y/rangeKm*R]; }
+    var seg = probClipSegment([geo.ax, geo.ay], [geo.bx, geo.by], rangeKm);
+    if (!seg) return;
+    var dAB_x = geo.bx-geo.ax, dAB_y = geo.by-geo.ay;
+    var sA = toXY(geo.ax + seg[0]*dAB_x, geo.ay + seg[0]*dAB_y);
+    var sD = toXY(geo.ax + seg[1]*dAB_x, geo.ay + seg[1]*dAB_y);
+    var sF = toXY(geo.fx, geo.fy);
+    probPolarView = { cx: cx, cy: cy, R: R, rangeKm: rangeKm, sA: sA, sD: sD };
+
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(sF[0],sF[1]);
+    ctx.setLineDash([3,3]); ctx.strokeStyle = textColor; ctx.globalAlpha = 0.7; ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+    ctx.beginPath(); ctx.moveTo(sA[0],sA[1]); ctx.lineTo(sD[0],sD[1]);
+    ctx.strokeStyle = "rgba(10,12,16,0.55)"; ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.stroke();
+    ctx.lineWidth = 1;
+
+    ctx.beginPath(); ctx.arc(sF[0],sF[1],3,0,Math.PI*2);
+    ctx.strokeStyle = textColor; ctx.stroke();
+
+    [[sA,"A"],[sD,"D"]].forEach(function(pt){
+      ctx.beginPath(); ctx.arc(pt[0][0],pt[0][1],5,0,Math.PI*2);
+      ctx.fillStyle = "rgba(10,12,16,0.55)"; ctx.fill();
+      ctx.beginPath(); ctx.arc(pt[0][0],pt[0][1],3.5,0,Math.PI*2);
+      ctx.fillStyle = accent; ctx.fill();
+      ctx.fillStyle = textColor; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText(pt[1], pt[0][0], pt[0][1]-7);
+    });
+  }
+
+  // plot rectangles of the two clickable heatmaps, read by their pointer handlers
+  var probLineView = null, probSpeedView = null;
+
+  function drawProbLine(canvasId){
+    var c = setupCanvas(document.getElementById(canvasId || "probLineCanvas"));
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0,0,w,h);
+    probLineView = null;
+    var geo = probFlightGeometry();
+    if (!probField || !geo) return;
+    var padL=44, padR=12, padT=10, padB=28;
+    var plotW = w-padL-padR, plotH = h-padT-padB;
+    if (plotW<=10 || plotH<=10) return;
+    probLineView = { padT: padT, plotH: plotH };
+
+    // x runs from the earlier of (flight start, closest approach) to the later
+    // of (flight end, closest approach), so the closest-approach x-intercept is always on-plot
+    var xMin = Math.min(geo.sMin, 0), xMax = Math.max(geo.sMax, 0);
+    var xSpan = xMax-xMin;
+    var hMax = PROB_LINE_MAX_ALT_KM;
+    function xFor(km){ return padL + (km-xMin)/xSpan*plotW; }
+    function yFor(altKm){ return padT + (1-altKm/hMax)*plotH; }
+
+    var lineColor = css("--grid-line") || "#9aa5b1";
+    var textColor = css("--text-muted") || "#8d96a6";
+    var accent = css("--accent") || "#548325";
+
+    var cellW = plotW/PROB_LINE_NS, cellH = plotH/PROB_LINE_NH;
+    var combined = probField.combined, g = probField.geom;
+    for (var hi=0; hi<PROB_LINE_NH; hi++){
+      var altKm = (hi+0.5)/PROB_LINE_NH*hMax;
+      var y0 = padT + plotH - (hi+1)*cellH;
+      for (var si=0; si<PROB_LINE_NS; si++){
+        var sKm = xMin + (si+0.5)/PROB_LINE_NS*xSpan;
+        if (sKm < geo.sMin || sKm > geo.sMax) continue;
+        var p = probPointP(combined, g, geo.fx + sKm*geo.ex, geo.fy + sKm*geo.ey, altKm);
+        var col = probColorFor(p);
+        ctx.fillStyle = "rgb("+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0)+")";
+        ctx.fillRect(padL+si*cellW, y0, cellW+0.6, cellH+0.6);
+      }
+    }
+
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = textColor;
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    [0,0.5,1,1.5,2].forEach(function(v){
+      ctx.fillText(v.toFixed(1)+" km", padL-5, yFor(v));
+    });
+
+    var xStep = niceAxisStep(xSpan, 6);
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (var k=Math.ceil(xMin/xStep); k*xStep<=xMax+1e-9; k++){
+      var v = k*xStep;
+      ctx.fillText(probTickLabel(v, xStep), xFor(v), padT+plotH+4);
+    }
+    ctx.fillText("along-track km · 0 = closest approach", padL+plotW/2, padT+plotH+16);
+
+    var yAlt = yFor(state.prob.altitudeM/1000);
+    ctx.setLineDash([3,3]); ctx.strokeStyle = accent; ctx.lineWidth = 1.25;
+    ctx.beginPath(); ctx.moveTo(padL,yAlt); ctx.lineTo(padL+plotW,yAlt); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth = 1;
+
+    var x0 = xFor(0);
+    ctx.strokeStyle = textColor; ctx.lineWidth = 1.25;
+    ctx.beginPath(); ctx.moveTo(x0,padT); ctx.lineTo(x0,padT+plotH); ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("closest "+geo.closestKm.toFixed(2)+" km", x0+4, padT+2);
+  }
+
+  // likely number of detections (Nexp) by transmission interval x flight speed,
+  // at the selected altitude. The path integral depends only on altitude and the
+  // flight line, so it is computed once; each cell then divides it by its own
+  // pulse spacing (speed * interval).
+  var PROB_IV_NS = 60;        // interval columns, 1..60 s
+  var PROB_SPD_NH = 45;       // speed rows, 10..100 km/h
+  var PROB_SPD_MIN = 10, PROB_SPD_MAX = 100;
+  var PROB_IV_NMAX = 20;      // fixed colour domain: 0 = bottom colour, PROB_IV_NMAX and above = top colour
+
+  function drawProbIntervalSpeed(canvasId){
+    var c = setupCanvas(document.getElementById(canvasId || "probIntervalSpeedCanvas"));
+    var ctx = c.ctx, w = c.w, h = c.h;
+    ctx.clearRect(0,0,w,h);
+    probSpeedView = null;
+    var geo = probFlightGeometry();
+    if (!probField || !geo) return;
+    var padL=60, padR=12, padT=10, padB=28;
+    var plotW = w-padL-padR, plotH = h-padT-padB;
+    if (plotW<=10 || plotH<=10) return;
+    probSpeedView = { padL: padL, padT: padT, plotW: plotW, plotH: plotH };
+    var cellW = plotW/PROB_IV_NS, cellH = plotH/PROB_SPD_NH;
+    var integral = probSegmentIntegral(probField.combined, probField.geom, geo.fx, geo.fy, geo.ex, geo.ey, geo.sMin, geo.sMax, state.prob.altitudeM/1000);
+
+    for (var si=0; si<PROB_SPD_NH; si++){
+      var speedKmh = PROB_SPD_MIN + (si+0.5)/PROB_SPD_NH*(PROB_SPD_MAX-PROB_SPD_MIN);
+      var speedKmPerSec = speedKmh/3600;
+      var y0 = padT + plotH - (si+1)*cellH;
+      for (var ii=0; ii<PROB_IV_NS; ii++){
+        var n = integral/(speedKmPerSec*(ii+1));   // dsPulse = speed * interval
+        var col = probColorFor(Math.min(1, n/PROB_IV_NMAX));
+        ctx.fillStyle = "rgb("+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0)+")";
+        ctx.fillRect(padL+ii*cellW, y0, cellW+0.6, cellH+0.6);
+      }
+    }
+
+    var textColor = css("--text-muted") || "#8d96a6";
+    var accent = css("--accent") || "#548325";
+    function yFor(v){ return padT + (1-(v-PROB_SPD_MIN)/(PROB_SPD_MAX-PROB_SPD_MIN))*plotH; }
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = textColor;
+    ctx.textAlign = "right";
+    [10,40,70,100].forEach(function(v){
+      ctx.textBaseline = v===100 ? "top" : (v===10 ? "bottom" : "middle");
+      ctx.fillText(v+" km/h", padL-5, yFor(v));
+    });
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    [1,10,20,30,40,50,60].forEach(function(sec){
+      ctx.fillText(String(sec), padL + (sec-0.5)*cellW, padT+plotH+4);
+    });
+    ctx.fillText("transmission interval (s)", padL+plotW/2, padT+plotH+16);
+
+    // marker at the currently selected interval and speed
+    var mx = padL + (state.prob.intervalSec-0.5)*cellW;
+    var my = yFor(state.prob.speedKmh);
+    ctx.beginPath(); ctx.arc(mx,my,5,0,Math.PI*2);
+    ctx.strokeStyle = "rgba(10,12,16,0.55)"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(mx,my,5,0,Math.PI*2);
+    ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  function computeProbHeadline(){
+    var geo = probFlightGeometry();
+    if (!probField || !geo) return null;
+    var ds = probDsKm();
+    var sumW=0, sumPW=0;
+    for (var ti=0; ti<probField.nTheta; ti++){
+      for (var ri=0; ri<probField.nR; ri++){
+        var Rkm = (ri+0.5)/probField.nR*probField.maxRangeKm;
+        var ptotal = 1-Math.exp(-probField.integral[ti][ri]/ds);
+        sumW += Rkm; sumPW += ptotal*Rkm;
+      }
+    }
+    var flight = probSegmentIntegral(probField.combined, probField.geom, geo.fx, geo.fy, geo.ex, geo.ey, geo.sMin, geo.sMax, state.prob.altitudeM/1000);
+    var selStats = probStatsFromIntegral(flight);
+    return {
+      areaAvgP: sumW>0 ? sumPW/sumW : 0,
+      selPtotal: selStats.ptotal,
+      selNexp: selStats.nexp,
+      closestKm: geo.closestKm,
+      closestBearingDeg: geo.closestBearingDeg
+    };
+  }
+
+  function updateProbStats(){
+    var headline = computeProbHeadline();
+    var elP = document.getElementById("probStatSelP");
+    var elN = document.getElementById("probStatSelN");
+    var elC = document.getElementById("probStatClosest");
+    var elA = document.getElementById("probStatArea");
+    if (!headline){
+      if (elP) elP.textContent = "—";
+      if (elN) elN.textContent = "—";
+      if (elC) elC.textContent = "—";
+      if (elA) elA.textContent = "—";
+      return;
+    }
+    if (elP) elP.textContent = (headline.selPtotal*100).toFixed(0) + "%";
+    if (elN) elN.textContent = headline.selNexp.toFixed(2);
+    if (elC) elC.textContent = headline.closestKm < 0.005
+      ? "0.00 km (through antenna)"
+      : headline.closestKm.toFixed(2) + " km · " + String(Math.round(headline.closestBearingDeg) % 360).padStart(3,"0") + "°";
+    if (elA) elA.textContent = (headline.areaAvgP*100).toFixed(0) + "%";
+  }
+
+  function drawProb(){
+    if (!allModels) return;
+    if (probFieldDirty){ rebuildProbField(); probFieldDirty = false; }
+    drawProbPolar();
+    drawProbLine();
+    drawProbIntervalSpeed();
+    updateProbStats();
+  }
+
   var glHost2 = document.getElementById("view2d");
+  var glHost3 = document.getElementById("viewProb");
+  var probPanel = document.getElementById("probPanel");
   var legendPanel = document.getElementById("legendPanel");
   var hintBar = document.getElementById("hintBar");
-  var viewBtns = { "3d": document.getElementById("view3dBtn"), "2d": document.getElementById("view2dBtn") };
+  var viewBtns = { "3d": document.getElementById("view3dBtn"), "2d": document.getElementById("view2dBtn"), "prob": document.getElementById("viewProbBtn") };
   function selectView(v){
     if (state.view === v) return;
     state.view = v;
     viewBtns["3d"].setAttribute("aria-pressed", v==="3d" ? "true":"false");
     viewBtns["2d"].setAttribute("aria-pressed", v==="2d" ? "true":"false");
+    viewBtns["prob"].setAttribute("aria-pressed", v==="prob" ? "true":"false");
     glHost.hidden = v !== "3d";
     legendPanel.hidden = v !== "3d";
     hintBar.hidden = v !== "3d";
     glHost2.hidden = v !== "2d";
+    glHost3.hidden = v !== "prob";
+    probPanel.hidden = v !== "prob";
     tooltip.hidden = true;
-    if (v === "2d") draw2D();
+    redrawViewIfNeeded();
+  }
+  // the only place other than selectView() that needs to know which of the
+  // three views is active before redrawing it - every other state-mutation
+  // handler just calls this instead of re-checking state.view itself
+  function redrawViewIfNeeded(){
+    if (state.view === "2d") draw2D();
+    else if (state.view === "prob") drawProb();
   }
   viewBtns["3d"].addEventListener("click", function(){ selectView("3d"); });
   viewBtns["2d"].addEventListener("click", function(){ selectView("2d"); });
+  viewBtns["prob"].addEventListener("click", function(){ selectView("prob"); });
 
   // ---------------------------------------------------------------- UI wiring
   var terrainGrid = document.getElementById("terrainGrid");
@@ -2527,7 +3155,7 @@
     });
     if (!allModels) return;
     refreshDome();
-    if (state.view === "2d") draw2D();
+    redrawViewIfNeeded();
   }
   threshBtns.min.addEventListener("click", function(){ selectThreshold("min"); });
   threshBtns.p50.addEventListener("click", function(){ selectThreshold("p50"); });
@@ -2544,8 +3172,150 @@
     updateNoiseValueDisplay();
     if (!allModels) return;
     refreshDome();
-    if (state.view === "2d") draw2D();
+    redrawViewIfNeeded();
   });
+
+  // ---------------------------------------------------------------- Trajectory (Detection probability view) controls
+  // altitude changes the polar field (dirty); interval/speed/distances only
+  // rescale the already-computed integrals or re-derive the flight line, so
+  // they just redraw (altersField = false)
+  // setter per state key, so the heatmaps can change a parameter the same way its slider does
+  var probParamSetters = {};
+  function wireProbRangeControl(sliderId, valueId, stateKey, parseFn, formatFn, altersField){
+    var slider = document.getElementById(sliderId);
+    var valueInput = document.getElementById(valueId);
+    function apply(v){
+      state.prob[stateKey] = v;
+      slider.value = v;
+      valueInput.value = formatFn(v);
+      if (altersField) probFieldDirty = true;
+      if (state.view === "prob") drawProb();
+    }
+    probParamSetters[stateKey] = apply;
+    slider.addEventListener("input", function(){ apply(parseFn(slider.value)); });
+    valueInput.addEventListener("change", function(){
+      var v = parseFn(valueInput.value);
+      if (!isFinite(v)) v = state.prob[stateKey];
+      v = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v));
+      apply(v);
+    });
+  }
+  function wrapDeg(v){ return ((Math.round(v) % 360) + 360) % 360; }
+  var asInt = function(v){ return parseInt(v,10); };
+  var fmtInt = function(v){ return String(v); };
+  wireProbRangeControl("probAltitudeSlider", "probAltitudeValue", "altitudeM", asInt, fmtInt, true);
+  wireProbRangeControl("probIntervalSlider", "probIntervalValue", "intervalSec", asInt, fmtInt, false);
+  wireProbRangeControl("probSpeedSlider", "probSpeedValue", "speedKmh", asInt, fmtInt, false);
+  wireProbRangeControl("probApproachBearingSlider", "probApproachBearingValue", "approachBearingDeg", function(v){ return wrapDeg(parseInt(v,10)); }, fmtInt, false);
+  wireProbRangeControl("probDepartBearingSlider", "probDepartBearingValue", "departBearingDeg", function(v){ return wrapDeg(parseInt(v,10)); }, fmtInt, false);
+
+  // click or drag inside a heatmap to set its parameters
+  function bindProbHeatmapPointer(canvasId, getView, applyAt){
+    var canvas = document.getElementById(canvasId);
+    canvas.style.touchAction = "none";
+    canvas.style.cursor = "crosshair";
+    var dragging = false;
+    function localPt(e){ var r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    function act(e){ var v = getView(); if (v) applyAt(v, localPt(e)); }
+    canvas.addEventListener("pointerdown", function(e){
+      if (e.button !== 0 || !getView()) return;
+      dragging = true;
+      canvas.setPointerCapture(e.pointerId);
+      act(e);
+      e.preventDefault();
+    });
+    canvas.addEventListener("pointermove", function(e){ if (dragging) act(e); });
+    function endDrag(e){
+      dragging = false;
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    }
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+  }
+
+  // line heatmap: the vertical position sets the flight altitude (0..2 km, 10 m steps)
+  bindProbHeatmapPointer("probLineCanvas", function(){ return probLineView; }, function(v, p){
+    var altM = (1 - (p[1]-v.padT)/v.plotH) * PROB_LINE_MAX_ALT_KM * 1000;
+    probParamSetters.altitudeM(Math.max(0, Math.min(PROB_LINE_MAX_ALT_KM*1000, Math.round(altM/10)*10)));
+  });
+  // interval x speed heatmap: x sets the transmission interval, y sets the flight speed
+  bindProbHeatmapPointer("probIntervalSpeedCanvas", function(){ return probSpeedView; }, function(v, p){
+    var iv = Math.round((p[0]-v.padL)/v.plotW*PROB_IV_NS + 0.5);
+    var spd = PROB_SPD_MIN + (1-(p[1]-v.padT)/v.plotH)*(PROB_SPD_MAX-PROB_SPD_MIN);
+    probParamSetters.intervalSec(Math.max(1, Math.min(PROB_IV_NS, iv)));
+    probParamSetters.speedKmh(Math.max(PROB_SPD_MIN, Math.min(PROB_SPD_MAX, Math.round(spd))));
+  });
+
+  function wrapAngle(v){ return ((v % 360) + 360) % 360; }
+
+  function syncProbBearingControls(){
+    [["approachBearingDeg","probApproachBearingSlider","probApproachBearingValue"],
+     ["departBearingDeg","probDepartBearingSlider","probDepartBearingValue"]].forEach(function(m){
+      var v = Math.round(state.prob[m[0]]) % 360;
+      document.getElementById(m[1]).value = v;
+      document.getElementById(m[2]).value = String(v);
+    });
+  }
+
+  // drag A or D to move that bearing; drag the line body to rotate both bearings together
+  (function(){
+    var canvas = document.getElementById("probPolarCanvas");
+    canvas.style.touchAction = "none";
+    var drag = null;
+    function localPt(e){ var r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    function bearingAt(p){
+      var v = probPolarView;
+      return (Math.atan2(p[1]-v.cy, p[0]-v.cx)*180/Math.PI + 90 + 360) % 360;
+    }
+    function hitTest(p){
+      var v = probPolarView;
+      if (!v) return null;
+      if (Math.hypot(p[0]-v.sA[0], p[1]-v.sA[1]) < 14) return "A";
+      if (Math.hypot(p[0]-v.sD[0], p[1]-v.sD[1]) < 14) return "D";
+      var ax = v.sA[0], ay = v.sA[1], dx = v.sD[0]-ax, dy = v.sD[1]-ay;
+      var L2 = dx*dx + dy*dy;
+      var t = L2 > 0 ? Math.max(0, Math.min(1, ((p[0]-ax)*dx + (p[1]-ay)*dy)/L2)) : 0;
+      if (Math.hypot(p[0]-(ax+t*dx), p[1]-(ay+t*dy)) < 8) return "line";
+      return null;
+    }
+    canvas.addEventListener("pointerdown", function(e){
+      if (e.button !== 0) return;
+      var p = localPt(e);
+      var hit = hitTest(p);
+      if (!hit) return;
+      drag = { mode: hit, last: bearingAt(p) };
+      canvas.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    canvas.addEventListener("pointermove", function(e){
+      var p = localPt(e);
+      if (!drag){
+        var h = hitTest(p);
+        canvas.style.cursor = h ? (h === "line" ? "move" : "grab") : "";
+        return;
+      }
+      var b = bearingAt(p);
+      if (drag.mode === "A") state.prob.approachBearingDeg = wrapAngle(b);
+      else if (drag.mode === "D") state.prob.departBearingDeg = wrapAngle(b);
+      else {
+        var d = b - drag.last;
+        if (d > 180) d -= 360;
+        if (d < -180) d += 360;
+        state.prob.approachBearingDeg = wrapAngle(state.prob.approachBearingDeg + d);
+        state.prob.departBearingDeg = wrapAngle(state.prob.departBearingDeg + d);
+      }
+      drag.last = b;
+      syncProbBearingControls();
+      if (state.view === "prob") drawProb();
+    });
+    function endDrag(e){
+      if (!drag) return;
+      drag = null;
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    }
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+  })();
 
   // instHeightSlider/instHeadingSlider/instMountBtns/instEnabledToggle/
   // instModelSelect/instPolBtns (below, in the Antennas-panel wiring block)
@@ -2561,7 +3331,7 @@
     updateMeasuredCouplingNote();
     refreshLiveCouplingStatus();
     refreshDome();
-    if (state.view === "2d") draw2D();
+    redrawViewIfNeeded();
     renderAntennaChips();
     drawTower();
   }
@@ -2621,7 +3391,7 @@
     // single-antenna behavior exactly) - every other control below updates
     // the dome instantly instead
     refreshDome(true);
-    if (state.view === "2d") draw2D();
+    redrawViewIfNeeded();
     renderAntennaChips();
     updateInstWarningNote();
   }
@@ -2701,6 +3471,7 @@
   // switch that changes grid resolution).
   function refreshDome(morph){
     if (!allModels) return;
+    probFieldDirty = true;
     if (state.domeMode === "single"){
       teardownSecondaryDome();
       var inst = activeAntenna();
@@ -2953,7 +3724,7 @@
     camera.aspect = w/Math.max(1,h);
     camera.updateProjectionMatrix();
     renderer.setSize(w,h,false);
-    if (state.view === "2d") draw2D();
+    redrawViewIfNeeded();
   }
   window.addEventListener("resize", resize);
 
@@ -3443,7 +4214,7 @@
 
     var lineColor = css("--grid-line") || "#9aa5b1";
     var textColor = css("--text-muted") || "#8d96a6";
-    var accent = css("--accent") || "#a8481a";
+    var accent = css("--accent") || "#548325";
     ctx.strokeStyle = lineColor;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(mastX, topY); ctx.lineTo(mastX, botY); ctx.stroke();
@@ -3661,7 +4432,7 @@
     if (allModels){
       refreshAntennaControlsForActive();
       refreshDome();
-      if (state.view === "2d") draw2D();
+      redrawViewIfNeeded();
     }
   }
   document.getElementById("combineUnionBtn").addEventListener("click", function(){ selectCombineMode("union"); });
@@ -3712,7 +4483,7 @@
         lc.status = null; // let refreshLiveCouplingStatus() below re-derive ready/stale from the result
         refreshLiveCouplingStatus();
         refreshDome();
-        if (state.view === "2d") draw2D();
+        redrawViewIfNeeded();
       })
       .catch(function(err){
         lc.status = "error";
@@ -3782,13 +4553,13 @@
       allCoupled = data;
       refreshCombineAvailability();
       refreshDome();
-      if (state.view === "2d") draw2D();
+      redrawViewIfNeeded();
     });
 
     refreshCombineAvailability();
     refreshLiveCouplingStatus();
     refreshDome();
-    if (state.view === "2d") draw2D();
+    redrawViewIfNeeded();
     animate();
   }).catch(function(err){
     document.getElementById("groundNote").textContent = "Failed to load pattern data: " + err;
@@ -3808,3 +4579,4 @@
   }
 })();
 </script>
+<script src="/shared/motus-account.js"></script>
