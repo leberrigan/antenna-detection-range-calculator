@@ -3,7 +3,8 @@
 <meta name="description" content="Interactive link-budget and range-envelope model for 2.4 GHz BLE beacon tags received on a ground-based 11-element Yagi, across six terrain types.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/motus-tools.css">
 <style>
   :root {
     --bg: #f6f5f1;
@@ -12,10 +13,10 @@
     --ink-dim: #5a625e;
     --line: #dcd9d0;
     --line-strong: #b9b4a6;
-    --accent: #4a5fc1;
-    --accent-soft: #e3e6fa;
+    --accent: var(--motus-primary, #4a5fc1);
+    --accent-soft: color-mix(in srgb, var(--motus-primary, #4a5fc1) 12%, white);
 
-    --c-quiet: #4a5fc1;
+    --c-quiet: var(--motus-primary, #4a5fc1);
     --c-typical: #a3852a;
     --c-noisy: #c15b2a;
     --c-horizon: #8a8478;
@@ -31,10 +32,10 @@
       --ink-dim: #a4a99f;
       --line: #303834;
       --line-strong: #454f49;
-      --accent: #8b9df0;
-      --accent-soft: #232a4d;
+      --accent: var(--motus-primary, #8b9df0);
+      --accent-soft: color-mix(in srgb, var(--motus-primary, #8b9df0) 25%, black);
 
-      --c-quiet: #8b9df0;
+      --c-quiet: var(--motus-primary, #8b9df0);
       --c-typical: #cfa94a;
       --c-noisy: #e08356;
       --c-horizon: #9a988c;
@@ -47,10 +48,10 @@
     --ink-dim: #a4a99f;
     --line: #303834;
     --line-strong: #454f49;
-    --accent: #8b9df0;
-    --accent-soft: #232a4d;
+    --accent: var(--motus-primary, #8b9df0);
+    --accent-soft: color-mix(in srgb, var(--motus-primary, #8b9df0) 25%, black);
 
-    --c-quiet: #8b9df0;
+    --c-quiet: var(--motus-primary, #8b9df0);
     --c-typical: #cfa94a;
     --c-noisy: #e08356;
     --c-horizon: #9a988c;
@@ -61,8 +62,7 @@
     margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: "IBM Plex Sans", system-ui, sans-serif;
-    padding: clamp(20px, 4vw, 48px) 16px 40px;
+    font-family: var(--motus-font, "IBM Plex Sans", system-ui, sans-serif);
   }
   .page {
     max-width: 920px;
@@ -70,11 +70,13 @@
     display: flex;
     flex-direction: column;
     gap: 28px;
+    padding: clamp(20px, 4vw, 48px) 16px 40px;
   }
   .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
 
-  header h1 {
+  header h2 {
     font-size: clamp(24px, 3.4vw, 32px);
+    font-weight: 700;
     margin: 0 0 8px;
     letter-spacing: -0.01em;
     text-wrap: balance;
@@ -115,7 +117,7 @@
     align-items: center;
   }
   .terrain-btn {
-    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-family: var(--motus-font, "IBM Plex Sans", system-ui, sans-serif);
     font-size: 13px;
     padding: 7px 14px;
     border-radius: 999px;
@@ -321,6 +323,31 @@
   }
 </style>
 
+<header class="motus-header">
+  <nav class="navbar">
+    <a class="navbar-brand" href="/">
+      <img class="navbar-brand-logo" src="/shared/img/motus-logo-horizontal.png" alt="Motus">
+      <span class="navbar-brand-title">2.4 GHz BLE Tag Range</span>
+    </a>
+    <ul class="nav">
+      <li class="nav-item"><a class="nav-link" id="tool-header-admin-link" href="/user-management/" style="display:none">Users</a></li>
+    </ul>
+  </nav>
+  <nav class="navbar navbar-account">
+    <ul class="nav">
+      <li class="nav-item dropdown" id="motus-account-item" style="display:none">
+        <a class="nav-link dropdown-toggle" href="#" id="motus-account-toggle"></a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="/oauth2/sign_out?rd=/">Sign out</a></li>
+        </ul>
+      </li>
+    </ul>
+    <img class="navbar-logo-birds-canada" src="/shared/img/birds-canada-logo-horizontal.png" alt="Birds Canada">
+  </nav>
+</header>
+<div class="tool-back-row">
+  <a class="tool-header-back" href="/">&lsaquo; Back to Motus Tools</a>
+</div>
 <div class="page">
   <div class="card terrain-bar">
     <div class="terrain-bar-label">Ground / terrain type</div>
@@ -337,7 +364,7 @@
   </div>
 
   <header>
-    <h1>2.4&nbsp;GHz BLE Tag &mdash; Range &amp; Link Budget</h1>
+    <h2>2.4&nbsp;GHz BLE Tag &mdash; Range &amp; Link Budget</h2>
     <p>A companion to the VHF Nanotag range tool, rebuilt for 2.4&nbsp;GHz Bluetooth Low Energy beacon tags received on a ground-mounted 11-element 2450&nbsp;MHz Yagi (WA5VJB &ldquo;Cheap Yagi&rdquo;). Same free-space + NEC2-antenna-pattern methodology; RF parameters here are reasoned assumptions for a compact BLE tag rather than a specific published product spec.</p>
   </header>
 
@@ -741,7 +768,7 @@ function renderHeatmap(canvasId, xMaxKm, yMaxM) {
   }
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.font = '12px "IBM Plex Sans", system-ui, sans-serif';
+  ctx.font = '12px "Overpass", system-ui, sans-serif';
   ctx.fillText('Horizontal distance from tower (km)', M.left+plotW/2, H-8);
   ctx.save();
   ctx.translate(16, M.top+plotH/2);
@@ -802,3 +829,4 @@ document.getElementById('compare-btn').addEventListener('click', () => {
 
 updateAll();
 </script>
+<script src="/shared/motus-account.js"></script>

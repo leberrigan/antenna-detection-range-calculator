@@ -71,6 +71,7 @@ BASELINE_FILES = {
     ("wa5vjb_yagi", "horizontal"): os.path.join(ROOT, "WA5VJB CheapYagi", "WA5VJB_CheapYagi_11el_2450MHz_horizontal_freespace_grid.nec"),
     ("hg2412p", "vertical"): os.path.join(ROOT, "HG2412P Corner Reflector", "HG2412P_derived_corner_reflector_2450MHz_vertical_freespace_grid.nec"),
     ("zdaqj166", "vertical"): os.path.join(ROOT, "ZDAQJ166", "ZDAQJ166_166MHz_vertical_freespace_grid.nec"),
+    ("dx_9el_yagi", "horizontal"): os.path.join(ROOT, "DX 9EL YAGI", "DX_9EL_YAGI_166MHz_freespace_grid.nec"),
 }
 
 RP_N_THETA, RP_DTHETA = 10, 10.0   # matches gen_coupled_pairs.py's coarse grid,
